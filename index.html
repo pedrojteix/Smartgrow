@@ -7,236 +7,175 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&family=DM+Mono:wght@400;500&display=swap');
-
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-  :root {
-    --green: #4a7c59;
-    --green-light: #e8f2eb;
-    --green-mid: #639922;
-    --amber: #BA7517;
-    --red: #E24B4A;
-    --blue: #378ADD;
-    --gray: #888780;
-    --text: #1a1a18;
-    --text-sec: #6b6b67;
-    --text-ter: #9e9e9a;
-    --bg: #fafaf8;
-    --surface: #ffffff;
-    --border: rgba(0,0,0,0.08);
-    --border-strong: rgba(0,0,0,0.14);
-    --radius: 12px;
-    --radius-sm: 8px;
-  }
-
-  body {
-    font-family: 'DM Sans', system-ui, sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    min-height: 100vh;
-    padding: 0;
-  }
-
-  /* HEADER */
-  .header {
-    background: var(--surface);
-    border-bottom: 1px solid var(--border);
-    padding: 0 24px;
-    height: 56px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    position: sticky;
-    top: 0;
-    z-index: 100;
-  }
-  .header-logo { display: flex; align-items: center; gap: 10px; }
-  .header-title { font-size: 15px; font-weight: 500; }
-  .header-sub { font-size: 11px; color: var(--text-sec); }
-  .header-right { display: flex; align-items: center; gap: 10px; }
-  .badge-live { font-size: 11px; padding: 3px 10px; border-radius: 20px; background: #e8f5e9; color: #2e7d32; font-weight: 500; }
-  .badge-load { font-size: 11px; padding: 3px 10px; border-radius: 20px; background: #f5f5f5; color: var(--text-sec); }
-  .badge-err  { font-size: 11px; padding: 3px 10px; border-radius: 20px; background: #ffebee; color: #c62828; }
-  .btn-refresh {
-    font-size: 12px; font-family: inherit; cursor: pointer;
-    border: 1px solid var(--border-strong); background: transparent;
-    color: var(--text-sec); padding: 5px 14px; border-radius: 20px;
-    transition: background .15s;
-  }
-  .btn-refresh:hover { background: var(--green-light); color: var(--green); border-color: var(--green); }
-
-  /* LAYOUT */
-  .main { max-width: 780px; margin: 0 auto; padding: 24px 16px 48px; }
-
-  .lbl {
-    font-size: 10px; font-weight: 500; color: var(--text-ter);
-    text-transform: uppercase; letter-spacing: .08em; margin: 0 0 8px;
-  }
-  .sec { margin-bottom: 20px; }
-
-  /* CARDS */
-  .card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 16px 20px;
-  }
-  .card-surface {
-    background: #f4f4f1;
-    border-radius: var(--radius);
-    padding: 16px 20px;
-  }
-
-  /* TOP GRID */
-  .top-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
-  @media(max-width:520px){ .top-grid { grid-template-columns: 1fr; } }
-
-  /* AUTONOMIA */
-  .aut-num { font-size: 44px; font-weight: 500; line-height: 1; color: var(--text); }
-  .aut-unit { font-size: 12px; color: var(--text-sec); margin: 3px 0 10px; }
-  .bar-bg { height: 3px; background: var(--border-strong); border-radius: 2px; overflow: hidden; margin-bottom: 5px; }
-  .bar-fill { height: 3px; border-radius: 2px; background: var(--green-mid); transition: width .5s; }
-  .aut-meta { font-size: 11px; color: var(--text-ter); }
-  .btn-reset {
-    font-size: 11px; color: var(--blue); cursor: pointer;
-    border: none; background: none; padding: 0; margin-top: 8px;
-    display: block; font-family: inherit;
-  }
-  .btn-reset:hover { text-decoration: underline; }
-
-  /* DIAG */
-  .diag-text { font-size: 14px; font-weight: 500; color: var(--text); line-height: 1.4; }
-  .diag-ts { font-size: 11px; color: var(--text-ter); margin-top: 8px; }
-
-  /* FATOR */
-  .fator-card { display: flex; align-items: center; gap: 18px; }
-  .fator-num { font-size: 40px; font-weight: 500; min-width: 60px; font-family: 'DM Mono', monospace; }
-  .fator-bar-bg { height: 4px; background: #ebebeb; border-radius: 2px; overflow: hidden; }
-  .fator-bar-fill { height: 4px; border-radius: 2px; transition: width .5s; }
-  .fator-scale { display: flex; justify-content: space-between; font-size: 10px; color: var(--text-ter); margin-top: 4px; }
-  .fator-desc { font-size: 12px; color: var(--text-sec); margin-top: 5px; }
-
-  /* SENSORES */
-  .metrics { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
-  .metrics::-webkit-scrollbar { display: none; }
-  .metric { background: #f4f4f1; border-radius: var(--radius-sm); padding: 12px 16px; min-width: 116px; flex-shrink: 0; }
-  .metric-lbl { font-size: 11px; color: var(--text-sec); margin-bottom: 5px; }
-  .metric-val { font-size: 22px; font-weight: 500; font-family: 'DM Mono', monospace; }
-  .metric-unit { font-size: 12px; color: var(--text-sec); font-weight: 400; font-family: 'DM Sans', sans-serif; }
-  .metric-soon { border: 1px dashed var(--border-strong); opacity: .45; }
-
-  /* PLANTAS */
-  .plantas-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  @media(max-width:420px){ .plantas-grid { grid-template-columns: 1fr; } }
-  .planta-nome { font-size: 13px; font-weight: 500; margin-bottom: 8px; }
-  .fase-pills { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 8px; }
-  .pill {
-    font-size: 10px; padding: 3px 10px; border-radius: 20px;
-    border: 1px solid var(--border-strong); color: var(--text-sec);
-    cursor: pointer; background: transparent; font-family: inherit;
-    transition: all .15s;
-  }
-  .pill.ativa { background: var(--green-mid); color: #fff; border-color: var(--green-mid); }
-  .planta-info { font-size: 11px; color: var(--text-sec); }
-
-  /* GRÁFICO */
-  .chart-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
-  .legend { display: flex; gap: 14px; font-size: 11px; color: var(--text-sec); }
-  .legend span { display: flex; align-items: center; gap: 5px; }
-  .ldot { width: 10px; height: 3px; border-radius: 2px; display: inline-block; }
-  .janela-btns { display: flex; gap: 4px; }
-  .jbtn {
-    font-size: 11px; padding: 3px 9px; border-radius: 20px;
-    border: 1px solid var(--border-strong); background: transparent;
-    color: var(--text-sec); cursor: pointer; font-family: inherit;
-    transition: all .15s;
-  }
-  .jbtn.ativo { background: var(--text); color: #fff; border-color: var(--text); }
-
-  /* DRIVE */
-  .drive-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  @media(max-width:520px){ .drive-grid { grid-template-columns: 1fr; } }
-  .drive-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
-  .drive-title { font-size: 13px; font-weight: 500; }
-  .drive-count { font-size: 11px; color: var(--text-ter); }
-  .file-row { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--border); }
-  .file-row:last-child { border-bottom: none; padding-bottom: 0; }
-  .foto-thumb {
-    width: 44px; height: 44px; border-radius: 7px;
-    background: #e8f2eb; border: 1px solid var(--border);
-    flex-shrink: 0; overflow: hidden; display: flex; align-items: center; justify-content: center;
-  }
-  .file-name { font-size: 12px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .file-meta { font-size: 10px; color: var(--text-ter); margin-top: 2px; }
-  .pdf-thumb {
-    width: 44px; height: 54px; border-radius: 5px;
-    background: #fff; border: 1px solid var(--border-strong);
-    flex-shrink: 0; display: flex; flex-direction: column; overflow: hidden; position: relative;
-  }
-  .pdf-top { height: 36px; background: #fafafa; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: center; }
-  .pdf-badge { position: absolute; bottom: 3px; left: 50%; transform: translateX(-50%); font-size: 7px; font-weight: 500; color: #A32D2D; letter-spacing: .05em; }
-  .pdf-lines { padding: 3px 5px; display: flex; flex-direction: column; gap: 2px; }
-  .pdf-line { height: 1.5px; background: #ddd; border-radius: 1px; }
-  .pdf-line:last-child { width: 70%; }
-
-  /* RESERVATÓRIO */
-  .reserv-grid { display: grid; grid-template-columns: 1fr auto 1fr; gap: 16px; align-items: center; }
-  @media(max-width:420px){ .reserv-grid { grid-template-columns: 1fr; } }
-  .reserv-val { font-size: 22px; font-weight: 500; font-family: 'DM Mono', monospace; }
-  .reserv-lbl { font-size: 11px; color: var(--text-sec); margin-top: 2px; }
-  .pct-wrap { position: relative; width: 80px; height: 80px; }
-  .pct-label {
-    position: absolute; top: 50%; left: 50%;
-    transform: translate(-50%,-50%);
-    font-size: 17px; font-weight: 500;
-    font-family: 'DM Mono', monospace;
-  }
-  .reserv-bottom { display: flex; align-items: center; justify-content: space-between; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border); }
-  .dot { width: 7px; height: 7px; border-radius: 50%; }
-  .dot-ok { background: var(--green-mid); }
-  .dot-alert { background: var(--red); }
-
-  /* ERROR */
-  .err-box { background: #fff5f5; border: 1px solid #ffcdd2; border-radius: var(--radius-sm); padding: 12px 16px; font-size: 13px; color: #c62828; margin-bottom: 16px; }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  :root{--green:#4a7c59;--green-light:#e8f2eb;--green-mid:#639922;--amber:#BA7517;--red:#E24B4A;--blue:#378ADD;--gray:#888780;--text:#1a1a18;--text-sec:#6b6b67;--text-ter:#9e9e9a;--bg:#fafaf8;--surface:#fff;--border:rgba(0,0,0,0.08);--border-strong:rgba(0,0,0,0.14);--radius:12px;--radius-sm:8px}
+  body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(--text)}
+  .header{background:var(--surface);border-bottom:1px solid var(--border);padding:0 24px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+  .h-logo{display:flex;align-items:center;gap:10px}
+  .h-title{font-size:15px;font-weight:500;margin:0}.h-sub{font-size:11px;color:var(--text-sec);margin:0}
+  .badge{font-size:11px;padding:3px 10px;border-radius:20px;font-weight:500}
+  .badge-live{background:#e8f5e9;color:#2e7d32}.badge-load{background:#f5f5f5;color:var(--text-sec)}.badge-err{background:#ffebee;color:#c62828}
+  .btn{font-size:12px;font-family:inherit;cursor:pointer;border:1px solid var(--border-strong);background:transparent;color:var(--text-sec);padding:5px 14px;border-radius:20px;transition:background .15s}
+  .btn:hover{background:var(--green-light);color:var(--green);border-color:var(--green)}
+  .btn-primary{background:var(--green);color:#fff;border:none;font-size:12px;font-family:inherit;cursor:pointer;padding:8px 20px;border-radius:20px}
+  .btn-primary:hover{background:#3d6b4b}
+  .main{max-width:800px;margin:0 auto;padding:24px 16px 60px}
+  .lbl{font-size:10px;font-weight:500;color:var(--text-ter);text-transform:uppercase;letter-spacing:.08em;margin:0 0 8px}
+  .sec{margin-bottom:20px}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px}
+  .card-surf{background:#f4f4f1;border-radius:var(--radius);padding:16px 20px}
+  .card-warn{background:#fff8e1;border:1px solid #ffe082;border-radius:var(--radius);padding:12px 16px;display:flex;align-items:center;gap:10px;margin-bottom:12px}
+  .warn-dot{width:8px;height:8px;border-radius:50%;background:#f57f17;flex-shrink:0}
+  .top-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px}
+  @media(max-width:520px){.top-grid{grid-template-columns:1fr}}
+  .aut-num{font-size:44px;font-weight:500;line-height:1;font-family:'DM Mono',monospace}
+  .aut-unit{font-size:12px;color:var(--text-sec);margin:3px 0 10px}
+  .bar-bg{height:3px;background:var(--border-strong);border-radius:2px;overflow:hidden;margin-bottom:5px}
+  .bar-fill{height:3px;border-radius:2px;transition:width .5s}
+  .aut-meta{font-size:11px;color:var(--text-ter)}
+  .btn-link{font-size:11px;color:var(--blue);cursor:pointer;border:none;background:none;padding:0;margin-top:8px;display:block;font-family:inherit}
+  .btn-link:hover{text-decoration:underline}
+  .fator-card{display:flex;align-items:center;gap:18px}
+  .fator-num{font-size:40px;font-weight:500;min-width:60px;font-family:'DM Mono',monospace}
+  .fator-bar-bg{height:4px;background:#ebebeb;border-radius:2px;overflow:hidden}
+  .fator-bar-fill{height:4px;border-radius:2px;transition:width .5s}
+  .fator-scale{display:flex;justify-content:space-between;font-size:10px;color:var(--text-ter);margin-top:4px}
+  .fator-desc{font-size:12px;color:var(--text-sec);margin-top:5px}
+  .metrics{display:flex;gap:10px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none}
+  .metrics::-webkit-scrollbar{display:none}
+  .metric{background:#f4f4f1;border-radius:var(--radius-sm);padding:12px 16px;min-width:116px;flex-shrink:0}
+  .metric-lbl{font-size:11px;color:var(--text-sec);margin-bottom:5px}
+  .metric-val{font-size:22px;font-weight:500;font-family:'DM Mono',monospace}
+  .metric-unit{font-size:12px;color:var(--text-sec);font-weight:400;font-family:'DM Sans',sans-serif}
+  .metric-soon{border:1px dashed var(--border-strong);opacity:.45}
+  .luz-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+  .luz-item{background:#f4f4f1;border-radius:var(--radius-sm);padding:12px 14px}
+  .luz-val{font-size:18px;font-weight:500;font-family:'DM Mono',monospace;margin-top:4px}
+  .plantas-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:420px){.plantas-grid{grid-template-columns:1fr}}
+  .planta-nome{font-size:13px;font-weight:500;margin-bottom:2px}
+  .planta-dias{font-size:11px;color:var(--text-sec);margin-bottom:8px}
+  .fase-pills{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px}
+  .pill{font-size:10px;padding:3px 10px;border-radius:20px;border:1px solid var(--border-strong);color:var(--text-sec);cursor:pointer;background:transparent;font-family:inherit;transition:all .15s}
+  .pill.ativa{background:var(--green-mid);color:#fff;border-color:var(--green-mid)}
+  .planta-info{font-size:11px;color:var(--text-sec)}
+  .ciclo-info{font-size:10px;color:var(--text-ter);margin-top:6px;line-height:1.6}
+  .btn-colheita{font-size:10px;padding:3px 10px;border-radius:20px;border:1px solid var(--border-strong);color:var(--red);cursor:pointer;background:transparent;font-family:inherit;margin-top:8px;transition:all .15s}
+  .btn-colheita:hover{background:#ffebee;border-color:var(--red)}
+  .chart-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+  .legend{display:flex;gap:14px;font-size:11px;color:var(--text-sec)}
+  .legend span{display:flex;align-items:center;gap:5px}
+  .ldot{width:10px;height:3px;border-radius:2px;display:inline-block}
+  .jbtns{display:flex;gap:4px}
+  .jbtn{font-size:11px;padding:3px 9px;border-radius:20px;border:1px solid var(--border-strong);background:transparent;color:var(--text-sec);cursor:pointer;font-family:inherit;transition:all .15s}
+  .jbtn.ativo{background:var(--text);color:#fff;border-color:var(--text)}
+  .reserv-grid{display:grid;grid-template-columns:1fr auto 1fr;gap:16px;align-items:center}
+  @media(max-width:420px){.reserv-grid{grid-template-columns:1fr}}
+  .reserv-val{font-size:20px;font-weight:500;font-family:'DM Mono',monospace;margin:0}
+  .reserv-lbl{font-size:11px;color:var(--text-sec);margin:2px 0 0}
+  .pct-wrap{position:relative;width:80px;height:80px}
+  .pct-label{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:17px;font-weight:500;font-family:'DM Mono',monospace}
+  .reserv-bottom{display:flex;align-items:center;justify-content:space-between;margin-top:14px;padding-top:12px;border-top:1px solid var(--border)}
+  .dot{width:7px;height:7px;border-radius:50%}.dot-ok{background:var(--green-mid)}.dot-alert{background:var(--red)}
+  .drive-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:520px){.drive-grid{grid-template-columns:1fr}}
+  .drive-title{font-size:13px;font-weight:500;margin:0}
+  .file-row{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--border)}
+  .file-row:last-child{border-bottom:none;padding-bottom:0}
+  .foto-thumb{width:44px;height:44px;border-radius:7px;background:#e8f2eb;border:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center}
+  .file-name{font-size:12px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:0}
+  .file-meta{font-size:10px;color:var(--text-ter);margin:2px 0 0}
+  .pdf-thumb{width:44px;height:54px;border-radius:5px;background:#fff;border:1px solid var(--border-strong);flex-shrink:0;display:flex;flex-direction:column;overflow:hidden;position:relative}
+  .pdf-top{height:36px;background:#fafafa;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:center}
+  .pdf-badge{position:absolute;bottom:3px;left:50%;transform:translateX(-50%);font-size:7px;font-weight:500;color:#A32D2D;letter-spacing:.05em}
+  .pdf-lines{padding:3px 5px;display:flex;flex-direction:column;gap:2px}
+  .pdf-line{height:1.5px;background:#ddd;border-radius:1px}.pdf-line:last-child{width:70%}
+  .evento-row{display:flex;gap:12px;padding:8px 0;border-bottom:1px solid var(--border);align-items:flex-start}
+  .evento-row:last-child{border-bottom:none}
+  .evento-hora{font-size:11px;color:var(--text-ter);font-family:'DM Mono',monospace;min-width:48px;margin-top:2px}
+  .evento-tipo{font-size:11px;font-weight:500;color:var(--text)}
+  .evento-desc{font-size:11px;color:var(--text-sec)}
+  .err-box{background:#fff5f5;border:1px solid #ffcdd2;border-radius:var(--radius-sm);padding:12px 16px;font-size:13px;color:#c62828;margin-bottom:16px}
+  /* MODAL */
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:200;display:flex;align-items:center;justify-content:center;padding:16px}
+  .modal{background:var(--surface);border-radius:var(--radius);padding:24px;max-width:480px;width:100%;max-height:90vh;overflow-y:auto}
+  .modal-title{font-size:16px;font-weight:500;margin:0 0 6px}
+  .modal-sub{font-size:12px;color:var(--text-sec);margin:0 0 20px}
+  .modal-section{margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border)}
+  .modal-section:last-of-type{border-bottom:none;margin-bottom:0}
+  .modal-section-title{font-size:11px;font-weight:500;color:var(--green);margin:0 0 10px;text-transform:uppercase;letter-spacing:.05em}
+  .form-row{margin-bottom:10px}
+  .form-label{font-size:11px;color:var(--text-sec);display:block;margin-bottom:4px}
+  .form-input{width:100%;border:1px solid var(--border-strong);border-radius:var(--radius-sm);padding:8px 12px;font-size:13px;font-family:inherit;background:var(--bg);color:var(--text);outline:none}
+  .form-input:focus{border-color:var(--green);box-shadow:0 0 0 2px var(--green-light)}
+  .modal-actions{display:flex;gap:10px;margin-top:20px;justify-content:flex-end}
+  .hidden{display:none}
 </style>
 </head>
 <body>
 
-<header class="header">
-  <div class="header-logo">
-    <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
-      <circle cx="13" cy="13" r="12.5" stroke="#4a7c59" stroke-opacity=".4"/>
-      <path d="M13 21C13 21 7.5 16.5 7.5 11.5C7.5 8.46 10.01 6 13 6C15.99 6 18.5 8.46 18.5 11.5C18.5 16.5 13 21 13 21Z" fill="#4a7c59" opacity=".15" stroke="#4a7c59" stroke-width="1"/>
-      <line x1="13" y1="21" x2="13" y2="11" stroke="#4a7c59" stroke-width="1" stroke-dasharray="1.5 1.5"/>
-      <circle cx="13" cy="11" r="1.5" fill="#4a7c59"/>
-    </svg>
-    <div>
-      <p class="header-title">SmartGrow</p>
-      <p class="header-sub">Monitor de Cultivo</p>
+<!-- MODAL INÍCIO DE CICLO -->
+<div class="modal-overlay hidden" id="modal-ciclo">
+  <div class="modal">
+    <p class="modal-title">🌱 Novo ciclo iniciado!</p>
+    <p class="modal-sub">Preencha os dados de cada planta para rastrear o histórico completo do ciclo.</p>
+    <div class="modal-section">
+      <p class="modal-section-title">Planta 1 — Vaso 1</p>
+      <div class="form-row"><label class="form-label">Data de germinação</label><input class="form-input" type="date" id="p1-germ"></div>
+      <div class="form-row"><label class="form-label">Data do primeiro vaso (potinho)</label><input class="form-input" type="date" id="p1-vaso1"></div>
+      <div class="form-row"><label class="form-label">Altura ao entrar no SmartGrow (cm)</label><input class="form-input" type="number" id="p1-altura" placeholder="ex: 18" min="0" max="200"></div>
+      <div class="form-row"><label class="form-label">Data de entrada no SmartGrow (vaso 11L)</label><input class="form-input" type="date" id="p1-smartgrow"></div>
+    </div>
+    <div class="modal-section">
+      <p class="modal-section-title">Planta 2 — Vaso 2</p>
+      <div class="form-row"><label class="form-label">Data de germinação</label><input class="form-input" type="date" id="p2-germ"></div>
+      <div class="form-row"><label class="form-label">Data do primeiro vaso (potinho)</label><input class="form-input" type="date" id="p2-vaso1"></div>
+      <div class="form-row"><label class="form-label">Altura ao entrar no SmartGrow (cm)</label><input class="form-input" type="number" id="p2-altura" placeholder="ex: 16" min="0" max="200"></div>
+      <div class="form-row"><label class="form-label">Data de entrada no SmartGrow (vaso 11L)</label><input class="form-input" type="date" id="p2-smartgrow"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="fecharModal()">Pular por agora</button>
+      <button class="btn-primary" onclick="salvarDadosCiclo()">Salvar dados</button>
     </div>
   </div>
-  <div class="header-right">
-    <span class="badge-load" id="sg-status">Carregando...</span>
-    <button class="btn-refresh" onclick="carregarDados()">Atualizar</button>
+</div>
+
+<header class="header">
+  <div class="h-logo">
+    <svg width="26" height="26" viewBox="0 0 26 26" fill="none"><circle cx="13" cy="13" r="12.5" stroke="#4a7c59" stroke-opacity=".4"/><path d="M13 21C13 21 7.5 16.5 7.5 11.5C7.5 8.46 10.01 6 13 6C15.99 6 18.5 8.46 18.5 11.5C18.5 16.5 13 21 13 21Z" fill="#4a7c59" opacity=".15" stroke="#4a7c59" stroke-width="1"/><line x1="13" y1="21" x2="13" y2="11" stroke="#4a7c59" stroke-width="1" stroke-dasharray="1.5 1.5"/><circle cx="13" cy="11" r="1.5" fill="#4a7c59"/></svg>
+    <div><p class="h-title">SmartGrow</p><p class="h-sub">Monitor de Cultivo</p></div>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px">
+    <span class="badge badge-load" id="sg-status">Carregando...</span>
+    <button class="btn" onclick="carregarDados()">Atualizar</button>
   </div>
 </header>
 
 <main class="main">
   <div id="sg-error"></div>
+  <div id="sg-warn"></div>
+  <div id="sg-alerta-ia"></div>
 
   <div class="top-grid">
-    <div class="card-surface">
+    <div class="card-surf">
       <p class="lbl">Autonomia</p>
       <p class="aut-num" id="aut-num">--</p>
       <p class="aut-unit">dias restantes</p>
       <div class="bar-bg"><div class="bar-fill" id="aut-bar" style="width:0%"></div></div>
       <p class="aut-meta" id="aut-meta">Calculando...</p>
-      <button class="btn-reset" onclick="resetGalao()">Galão reabastecido (7L) →</button>
+      <button class="btn-link" onclick="resetGalao()">Galão reabastecido (7L) →</button>
     </div>
     <div class="card" style="display:flex;flex-direction:column">
       <p class="lbl">Diagnóstico IA</p>
-      <p class="diag-text" id="diag-text">Carregando...</p>
-      <p class="diag-ts" id="diag-ts">—</p>
+      <p style="font-size:14px;font-weight:500;margin:0 0 auto;line-height:1.4" id="diag-text">Carregando...</p>
+      <p style="font-size:11px;color:var(--text-ter);margin:8px 0 0" id="diag-ts">—</p>
+    </div>
+  </div>
+
+  <div class="sec hidden" id="sec-motivo">
+    <div class="card" style="padding:12px 16px">
+      <p class="lbl" style="margin-bottom:4px">Motivo da decisão da IA</p>
+      <p style="font-size:12px;color:var(--text-sec);line-height:1.5" id="motivo-text">—</p>
     </div>
   </div>
 
@@ -260,9 +199,32 @@
       <div class="metric"><p class="metric-lbl">Vaso 1</p><p class="metric-val" id="m-u1">--<span class="metric-unit">%</span></p></div>
       <div class="metric"><p class="metric-lbl">Vaso 2</p><p class="metric-val" id="m-u2">--<span class="metric-unit">%</span></p></div>
       <div class="metric"><p class="metric-lbl">Média</p><p class="metric-val" id="m-med">--<span class="metric-unit">%</span></p></div>
-      <div class="metric"><p class="metric-lbl">Volume regado</p><p class="metric-val" id="m-vol">--<span class="metric-unit">mL</span></p></div>
+      <div class="metric"><p class="metric-lbl">Vol/vaso</p><p class="metric-val" id="m-vbase">--<span class="metric-unit">mL</span></p></div>
+      <div class="metric"><p class="metric-lbl">Vol total</p><p class="metric-val" id="m-vtotal">--<span class="metric-unit">mL</span></p></div>
       <div class="metric metric-soon"><p class="metric-lbl">Temperatura</p><p class="metric-val" style="font-size:13px;color:var(--text-ter)">em breve</p></div>
       <div class="metric metric-soon"><p class="metric-lbl">VPD</p><p class="metric-val" style="font-size:13px;color:var(--text-ter)">em breve</p></div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <p class="lbl">Iluminação</p>
+    <div class="card">
+      <div class="luz-grid">
+        <div class="luz-item">
+          <p class="metric-lbl">Status atual</p>
+          <p class="luz-val" id="luz-status">--</p>
+          <span style="font-size:10px;padding:2px 8px;border-radius:20px;display:inline-block;margin-top:6px" id="luz-badge">--</span>
+        </div>
+        <div class="luz-item">
+          <p class="metric-lbl">Fase / horário</p>
+          <p class="luz-val" id="luz-fase">--</p>
+          <p style="font-size:11px;color:var(--text-sec);margin-top:4px" id="luz-horario">--</p>
+        </div>
+        <div class="luz-item">
+          <p class="metric-lbl">Ciclo</p>
+          <p class="luz-val" id="luz-ciclo">--</p>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -271,21 +233,27 @@
     <div class="plantas-grid">
       <div class="card">
         <p class="planta-nome">Planta 1 — Vaso 1</p>
+        <p class="planta-dias" id="dias-p1">Ciclo não iniciado</p>
         <div class="fase-pills" id="fase-p1">
           <button class="pill" onclick="setFase(0,'Germinação')">Germinação</button>
           <button class="pill ativa" onclick="setFase(0,'Vegetação')">Vegetação</button>
           <button class="pill" onclick="setFase(0,'Floração')">Floração</button>
         </div>
         <p class="planta-info" id="info-p1">Fase atual: <strong>Vegetação</strong></p>
+        <div class="ciclo-info" id="ciclo-p1"></div>
+        <button class="btn-colheita" onclick="colherPlanta(1)">Registrar colheita →</button>
       </div>
       <div class="card">
         <p class="planta-nome">Planta 2 — Vaso 2</p>
+        <p class="planta-dias" id="dias-p2">Ciclo não iniciado</p>
         <div class="fase-pills" id="fase-p2">
           <button class="pill" onclick="setFase(1,'Germinação')">Germinação</button>
           <button class="pill ativa" onclick="setFase(1,'Vegetação')">Vegetação</button>
           <button class="pill" onclick="setFase(1,'Floração')">Floração</button>
         </div>
         <p class="planta-info" id="info-p2">Fase atual: <strong>Vegetação</strong></p>
+        <div class="ciclo-info" id="ciclo-p2"></div>
+        <button class="btn-colheita" onclick="colherPlanta(2)">Registrar colheita →</button>
       </div>
     </div>
   </div>
@@ -298,7 +266,7 @@
           <span><span class="ldot" style="background:#639922"></span>Vaso 2</span>
           <span><span class="ldot" style="background:#888780"></span>Média</span>
         </div>
-        <div class="janela-btns">
+        <div class="jbtns">
           <button class="jbtn ativo" onclick="setJanela(this,8)">Hoje</button>
           <button class="jbtn" onclick="setJanela(this,48)">7d</button>
           <button class="jbtn" onclick="setJanela(this,96)">14d</button>
@@ -306,74 +274,7 @@
         </div>
       </div>
       <div style="position:relative;height:220px">
-        <canvas id="sg-chart" role="img" aria-label="Gráfico histórico de umidade dos dois vasos">Histórico de umidade dos sensores.</canvas>
-      </div>
-    </div>
-  </div>
-
-  <div class="sec">
-    <p class="lbl">Google Drive</p>
-    <div class="drive-grid">
-      <div class="card">
-        <div class="drive-header">
-          <p class="drive-title">Fotos</p>
-          <span class="drive-count">Conectar Drive</span>
-        </div>
-        <div class="file-row">
-          <div class="foto-thumb" style="background:linear-gradient(135deg,#c8e6c9,#81c784)">
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="8" r="3" fill="#fff" opacity=".7"/><path d="M4 16c0-3.3 2.7-6 6-6s6 2.7 6 6" stroke="#fff" stroke-width="1.2" opacity=".7"/></svg>
-          </div>
-          <div style="flex:1;min-width:0">
-            <p class="file-name">P1_veg_20260421.jpg</p>
-            <p class="file-meta">21/04/2026 · 16:06</p>
-          </div>
-        </div>
-        <div class="file-row">
-          <div class="foto-thumb" style="background:linear-gradient(135deg,#a5d6a7,#66bb6a)">
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="8" r="3" fill="#fff" opacity=".7"/><path d="M4 16c0-3.3 2.7-6 6-6s6 2.7 6 6" stroke="#fff" stroke-width="1.2" opacity=".7"/></svg>
-          </div>
-          <div style="flex:1;min-width:0">
-            <p class="file-name">P2_veg_20260421.jpg</p>
-            <p class="file-meta">21/04/2026 · 16:04</p>
-          </div>
-        </div>
-        <div class="file-row" style="border:none;padding-bottom:0">
-          <div class="foto-thumb" style="border:1px dashed var(--border-strong);background:transparent">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="2" y="4" width="12" height="9" rx="1" stroke="#aaa" stroke-width="1"/><path d="M2 11l3-3 2 2 3-3 4 4" stroke="#aaa" stroke-width="1"/></svg>
-          </div>
-          <div style="flex:1;min-width:0">
-            <p class="file-name" style="color:var(--text-ter)">Conecte o Drive para ver todas</p>
-            <p class="file-meta">—</p>
-          </div>
-        </div>
-      </div>
-      <div class="card">
-        <div class="drive-header">
-          <p class="drive-title">Base de conhecimento</p>
-          <span class="drive-count">2 arquivos</span>
-        </div>
-        <div class="file-row">
-          <div class="pdf-thumb">
-            <div class="pdf-top"><svg width="18" height="22" viewBox="0 0 18 22" fill="none"><rect x="1" y="1" width="16" height="20" rx="1.5" fill="#fff" stroke="#ddd" stroke-width=".5"/><line x1="3.5" y1="5" x2="14.5" y2="5" stroke="#ccc" stroke-width=".8"/><line x1="3.5" y1="7.5" x2="14.5" y2="7.5" stroke="#ccc" stroke-width=".8"/><line x1="3.5" y1="10" x2="10" y2="10" stroke="#ccc" stroke-width=".8"/></svg></div>
-            <div class="pdf-lines"><div class="pdf-line"></div><div class="pdf-line"></div><div class="pdf-line"></div></div>
-            <span class="pdf-badge">PDF</span>
-          </div>
-          <div style="flex:1;min-width:0">
-            <p class="file-name">API Passower</p>
-            <p class="file-meta">Base de conhecimento</p>
-          </div>
-        </div>
-        <div class="file-row" style="border:none;padding-bottom:0">
-          <div class="pdf-thumb">
-            <div class="pdf-top"><svg width="18" height="22" viewBox="0 0 18 22" fill="none"><rect x="1" y="1" width="16" height="20" rx="1.5" fill="#fff" stroke="#ddd" stroke-width=".5"/><line x1="3.5" y1="5" x2="14.5" y2="5" stroke="#ccc" stroke-width=".8"/><line x1="3.5" y1="7.5" x2="14.5" y2="7.5" stroke="#ccc" stroke-width=".8"/><line x1="3.5" y1="10" x2="10" y2="10" stroke="#ccc" stroke-width=".8"/></svg></div>
-            <div class="pdf-lines"><div class="pdf-line"></div><div class="pdf-line"></div><div class="pdf-line"></div></div>
-            <span class="pdf-badge">PDF</span>
-          </div>
-          <div style="flex:1;min-width:0">
-            <p class="file-name">API R00</p>
-            <p class="file-meta">Base de conhecimento</p>
-          </div>
-        </div>
+        <canvas id="sg-chart" role="img" aria-label="Histórico de umidade dos dois vasos">Histórico de umidade.</canvas>
       </div>
     </div>
   </div>
@@ -392,18 +293,18 @@
           <div class="pct-wrap">
             <svg width="80" height="80" viewBox="0 0 80 80">
               <circle cx="40" cy="40" r="33" fill="none" stroke="#ebebeb" stroke-width="5"/>
-              <circle cx="40" cy="40" r="33" fill="none" stroke="#639922" stroke-width="5"
-                stroke-dasharray="207.3" id="res-arc" stroke-dashoffset="52"
-                stroke-linecap="round" transform="rotate(-90 40 40)"/>
+              <circle cx="40" cy="40" r="33" fill="none" stroke="#639922" stroke-width="5" stroke-dasharray="207.3" id="res-arc" stroke-dashoffset="52" stroke-linecap="round" transform="rotate(-90 40 40)"/>
             </svg>
             <span class="pct-label" id="res-pct">--</span>
           </div>
           <p style="font-size:11px;color:var(--text-ter)">de 7L</p>
         </div>
         <div style="text-align:right">
-          <p class="reserv-val" id="res-consumo">~150mL</p>
-          <p class="reserv-lbl">consumo/dia</p>
-          <button class="btn-reset" style="text-align:right;margin-top:10px" onclick="resetGalao()">Galão reabastecido →</button>
+          <p class="reserv-val" id="res-vaso">--mL</p>
+          <p class="reserv-lbl">por vaso / rega</p>
+          <p class="reserv-val" style="margin-top:8px" id="res-total">--mL</p>
+          <p class="reserv-lbl">total sistema (×2)</p>
+          <button class="btn-link" style="text-align:right;margin-top:10px" onclick="resetGalao()">Galão reabastecido →</button>
         </div>
       </div>
       <div class="reserv-bottom">
@@ -415,150 +316,287 @@
       </div>
     </div>
   </div>
+
+  <div class="sec">
+    <p class="lbl">Google Drive</p>
+    <div class="drive-grid">
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <p class="drive-title">Fotos</p><span style="font-size:11px;color:var(--text-ter)">Conectar Drive</span>
+        </div>
+        <div class="file-row">
+          <div class="foto-thumb"><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="8" r="3" fill="#4a7c59" opacity=".4"/><path d="M4 16c0-3.3 2.7-6 6-6s6 2.7 6 6" stroke="#4a7c59" stroke-width="1.2" opacity=".4"/></svg></div>
+          <div style="flex:1;min-width:0"><p class="file-name" style="color:var(--text-ter)">Conecte o Drive para ver fotos</p><p class="file-meta">—</p></div>
+        </div>
+      </div>
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <p class="drive-title">Base de conhecimento</p><span style="font-size:11px;color:var(--text-ter)">2 arquivos</span>
+        </div>
+        <div class="file-row">
+          <div class="pdf-thumb"><div class="pdf-top"><svg width="18" height="22" viewBox="0 0 18 22" fill="none"><rect x="1" y="1" width="16" height="20" rx="1.5" fill="#fff" stroke="#ddd" stroke-width=".5"/><line x1="3.5" y1="5" x2="14.5" y2="5" stroke="#ccc" stroke-width=".8"/><line x1="3.5" y1="7.5" x2="14.5" y2="7.5" stroke="#ccc" stroke-width=".8"/></svg></div><div class="pdf-lines"><div class="pdf-line"></div><div class="pdf-line"></div><div class="pdf-line"></div></div><span class="pdf-badge">PDF</span></div>
+          <div style="flex:1;min-width:0"><p class="file-name">API Passower</p><p class="file-meta">Base de conhecimento</p></div>
+        </div>
+        <div class="file-row" style="border:none;padding-bottom:0">
+          <div class="pdf-thumb"><div class="pdf-top"><svg width="18" height="22" viewBox="0 0 18 22" fill="none"><rect x="1" y="1" width="16" height="20" rx="1.5" fill="#fff" stroke="#ddd" stroke-width=".5"/><line x1="3.5" y1="5" x2="14.5" y2="5" stroke="#ccc" stroke-width=".8"/><line x1="3.5" y1="7.5" x2="14.5" y2="7.5" stroke="#ccc" stroke-width=".8"/></svg></div><div class="pdf-lines"><div class="pdf-line"></div><div class="pdf-line"></div><div class="pdf-line"></div></div><span class="pdf-badge">PDF</span></div>
+          <div style="flex:1;min-width:0"><p class="file-name">API R00</p><p class="file-meta">Base de conhecimento</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <p class="lbl">Últimos Eventos</p>
+    <div class="card" id="eventos-list">
+      <p style="font-size:13px;color:var(--text-ter)">Carregando eventos...</p>
+    </div>
+  </div>
 </main>
 
 <script>
-const SHEET_ID = "1cK0y2--PLGAo00W_UP4Ix53qcAVyQU9Na-uDlvNjYXo";
-const SHEET_URL = "https://docs.google.com/spreadsheets/d/" + SHEET_ID + "/gviz/tq?tqx=out:json";
-const GALAO_TOTAL_ML = 7000;
-const CONSUMO_DIA_ML = 150;
-let galaoAtual_mL = 7000;
-let chartInstance = null;
+const SHEET_ID  = "1cK0y2--PLGAo00W_UP4Ix53qcAVyQU9Na-uDlvNjYXo";
+const GAS_URL   = "https://script.google.com/macros/s/AKfycbyX8QFD4Ll265edbb_xpUFqzS1_8qKJPc8ztiqSQeuVdX06N1p9fpFKt9eDvp6Yb89FGQ/exec";
+const DADOS_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=DADOS`;
+const EVTS_URL  = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=EVENTOS`;
+
+const GALAO_ML = 7000;
+let galaoAtual  = 7000;
+let chartInst   = null;
 let janelaAtual = 8;
 let todosOsDados = [];
+let dadosCicloP1 = null;
+let dadosCicloP2 = null;
+let cicloModalAberto = false;
 
-function fatorInfo(f){
-  if(f===0) return {label:"Não regar",cor:"#378ADD"};
-  if(f<=0.5) return {label:"Rega leve",cor:"#639922"};
-  if(f<=1.0) return {label:"Rega normal",cor:"#BA7517"};
-  if(f<=1.5) return {label:"Rega intensa",cor:"#D85A30"};
-  return {label:"Emergência",cor:"#E24B4A"};
+const FASES_LUZ = {
+  germinacao:{h:17,liga:7,desliga:0},
+  vegetacao: {h:17,liga:7,desliga:0},
+  floracao:  {h:12,liga:8,desliga:20},
+};
+
+function fatorInfo(f) {
+  if(f===0)  return{label:"Não regar",  cor:"#378ADD"};
+  if(f<=0.5) return{label:"Rega leve",  cor:"#639922"};
+  if(f<=1.0) return{label:"Rega normal",cor:"#BA7517"};
+  if(f<=1.5) return{label:"Rega intensa",cor:"#D85A30"};
+  return          {label:"Emergência", cor:"#E24B4A"};
 }
 
-function atualizarReservatorio(){
-  const pct = Math.max(0,Math.min(100,(galaoAtual_mL/GALAO_TOTAL_ML)*100));
-  const dias = Math.max(0,Math.floor(galaoAtual_mL/CONSUMO_DIA_ML));
-  const litros = (galaoAtual_mL/1000).toFixed(1);
-  const C = 2*Math.PI*33;
-  const offset = C*(1-pct/100);
-  document.getElementById("res-litros").textContent = litros+"L";
-  document.getElementById("res-dias").textContent = dias+" dias";
-  document.getElementById("res-pct").textContent = Math.round(pct)+"%";
-  const arc = document.getElementById("res-arc");
+function diasEntre(dataStr) {
+  if(!dataStr) return null;
+  const d = new Date(dataStr); if(isNaN(d)) return null;
+  return Math.floor((Date.now()-d.getTime())/86400000);
+}
+function fmtData(s) {
+  if(!s) return "—";
+  const d=new Date(s); if(isNaN(d)) return "—";
+  return d.toLocaleDateString("pt-BR");
+}
+
+// ── RESERVATÓRIO ─────────────────────────────────
+function atualizarReservatorio(galaoMlSheets, vbase, vtotal) {
+  if(galaoMlSheets>0) galaoAtual=galaoMlSheets;
+  const pct   = Math.max(0,Math.min(100,(galaoAtual/GALAO_ML)*100));
+  const litros= (galaoAtual/1000).toFixed(1);
+  const consumoDia = vtotal>0 ? vtotal*2 : 300;
+  const dias  = Math.floor(galaoAtual/consumoDia);
+  const C=2*Math.PI*33, offset=C*(1-pct/100);
+  document.getElementById("res-litros").textContent=litros+"L";
+  document.getElementById("res-dias").textContent=dias+" dias";
+  document.getElementById("res-pct").textContent=Math.round(pct)+"%";
+  document.getElementById("res-vaso").textContent=vbase+"mL";
+  document.getElementById("res-total").textContent=vtotal+"mL";
+  const arc=document.getElementById("res-arc");
   arc.setAttribute("stroke-dasharray",C.toFixed(1));
   arc.setAttribute("stroke-dashoffset",offset.toFixed(1));
-  arc.setAttribute("stroke", pct<=20?"#E24B4A":pct<=40?"#BA7517":"#639922");
-  document.getElementById("aut-num").textContent = dias;
-  document.getElementById("aut-bar").style.width = pct+"%";
-  document.getElementById("aut-bar").style.background = pct<=20?"#E24B4A":"#639922";
-  document.getElementById("aut-meta").textContent = litros+"L restantes · ~"+CONSUMO_DIA_ML+"mL/dia estimado";
+  arc.setAttribute("stroke",pct<=20?"#E24B4A":pct<=40?"#BA7517":"#639922");
+  document.getElementById("aut-num").textContent=dias;
+  document.getElementById("aut-bar").style.width=pct+"%";
+  document.getElementById("aut-bar").style.background=pct<=20?"#E24B4A":"#639922";
+  document.getElementById("aut-meta").textContent=litros+"L restantes · consumo rastreado";
+}
+function resetGalao(){galaoAtual=GALAO_ML;atualizarReservatorio(GALAO_ML,0,0);}
+
+// ── LUZ ──────────────────────────────────────────
+function atualizarLuz(fase, luzOn) {
+  const p=FASES_LUZ[fase]||FASES_LUZ.vegetacao;
+  const nomes={germinacao:"Germinação",vegetacao:"Vegetação",floracao:"Floração"};
+  const descl=p.desliga===0?"07:00 → 00:00":`${String(p.liga).padStart(2,"0")}:00 → ${String(p.desliga).padStart(2,"0")}:00`;
+  document.getElementById("luz-status").textContent=luzOn?"Ligada":"Desligada";
+  const b=document.getElementById("luz-badge");
+  b.textContent=luzOn?"ON":"OFF";
+  b.style.background=luzOn?"#e8f5e9":"#f5f5f5";
+  b.style.color=luzOn?"#2e7d32":"var(--text-sec)";
+  document.getElementById("luz-fase").textContent=nomes[fase]||fase;
+  document.getElementById("luz-horario").textContent=descl;
+  document.getElementById("luz-ciclo").textContent=`${p.h}h luz / ${24-p.h}h escuro`;
 }
 
-function resetGalao(){
-  galaoAtual_mL = GALAO_TOTAL_ML;
-  atualizarReservatorio();
+// ── PLANTAS ───────────────────────────────────────
+function atualizarPlanta(idx, diasCiclo) {
+  const n=idx+1;
+  document.getElementById(`dias-p${n}`).textContent=diasCiclo>0?`Dia ${diasCiclo} no SmartGrow`:"Ciclo não iniciado";
+  const dados=idx===0?dadosCicloP1:dadosCicloP2;
+  const el=document.getElementById(`ciclo-p${n}`);
+  if(dados){
+    const dv=diasEntre(dados.germinacao), ds=diasEntre(dados.smartgrow);
+    const ls=[];
+    if(dv!==null) ls.push(`Idade: ${dv} dias (desde ${fmtData(dados.germinacao)})`);
+    if(dados.vaso1) ls.push(`Primeiro vaso: ${fmtData(dados.vaso1)}`);
+    if(ds!==null) ls.push(`No SmartGrow: ${ds} dias (desde ${fmtData(dados.smartgrow)})`);
+    if(dados.altura) ls.push(`Altura de entrada: ${dados.altura}cm`);
+    el.innerHTML=ls.join("<br>");
+  } else { el.innerHTML=""; }
 }
 
+function setFase(idx,fase){
+  const id=idx===0?"fase-p1":"fase-p2",ii=idx===0?"info-p1":"info-p2";
+  document.querySelectorAll(`#${id} .pill`).forEach(p=>p.classList.toggle("ativa",p.textContent===fase));
+  document.getElementById(ii).innerHTML=`Fase atual: <strong>${fase}</strong>`;
+}
+function colherPlanta(n){if(confirm(`Registrar colheita da Planta ${n}? O ciclo será encerrado no histórico.`))alert(`Colheita da Planta ${n} registrada!`);}
+
+// ── GRÁFICO ───────────────────────────────────────
 function renderChart(dados){
-  const slice = dados.slice(0,janelaAtual).reverse();
-  if(chartInstance) chartInstance.destroy();
-  chartInstance = new Chart(document.getElementById("sg-chart"),{
+  const slice=dados.slice(0,janelaAtual).reverse();
+  if(chartInst) chartInst.destroy();
+  chartInst=new Chart(document.getElementById("sg-chart"),{
     type:"line",
-    data:{
-      labels:slice.map(d=>d.ts),
-      datasets:[
-        {label:"Vaso 1",data:slice.map(d=>d.u1),borderColor:"#378ADD",backgroundColor:"transparent",borderWidth:1.5,pointRadius:3,tension:0.3},
-        {label:"Vaso 2",data:slice.map(d=>d.u2),borderColor:"#639922",backgroundColor:"transparent",borderWidth:1.5,pointRadius:3,tension:0.3},
-        {label:"Média",data:slice.map(d=>parseFloat(d.media)),borderColor:"#888780",backgroundColor:"transparent",borderWidth:1,borderDash:[4,3],pointRadius:2,tension:0.3},
-      ]
-    },
-    options:{
-      responsive:true,maintainAspectRatio:false,
+    data:{labels:slice.map(d=>d.hora||d.ts),datasets:[
+      {label:"Vaso 1",data:slice.map(d=>d.u1),borderColor:"#378ADD",backgroundColor:"transparent",borderWidth:1.5,pointRadius:3,tension:0.3},
+      {label:"Vaso 2",data:slice.map(d=>d.u2),borderColor:"#639922",backgroundColor:"transparent",borderWidth:1.5,pointRadius:3,tension:0.3},
+      {label:"Média",data:slice.map(d=>d.media),borderColor:"#888780",backgroundColor:"transparent",borderWidth:1,borderDash:[4,3],pointRadius:2,tension:0.3},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
       plugins:{legend:{display:false}},
       scales:{
         y:{min:0,max:100,ticks:{font:{size:11},callback:v=>v+"%"},grid:{color:"rgba(0,0,0,0.04)"}},
         x:{ticks:{font:{size:10},maxRotation:45,autoSkip:true,maxTicksLimit:8},grid:{display:false}}
+      }}
+  });
+}
+function setJanela(btn,n){janelaAtual=n;document.querySelectorAll(".jbtn").forEach(b=>b.classList.remove("ativo"));btn.classList.add("ativo");if(todosOsDados.length)renderChart(todosOsDados);}
+
+// ── MODAL CICLO ───────────────────────────────────
+function abrirModal(){
+  if(cicloModalAberto) return;
+  cicloModalAberto=true;
+  const hoje=new Date().toISOString().split("T")[0];
+  document.getElementById("p1-smartgrow").value=hoje;
+  document.getElementById("p2-smartgrow").value=hoje;
+  document.getElementById("modal-ciclo").classList.remove("hidden");
+}
+function fecharModal(){document.getElementById("modal-ciclo").classList.add("hidden");}
+function salvarDadosCiclo(){
+  dadosCicloP1={germinacao:document.getElementById("p1-germ").value,vaso1:document.getElementById("p1-vaso1").value,altura:document.getElementById("p1-altura").value,smartgrow:document.getElementById("p1-smartgrow").value};
+  dadosCicloP2={germinacao:document.getElementById("p2-germ").value,vaso1:document.getElementById("p2-vaso1").value,altura:document.getElementById("p2-altura").value,smartgrow:document.getElementById("p2-smartgrow").value};
+  atualizarPlanta(0,0); atualizarPlanta(1,0);
+  fetch(GAS_URL,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({tipo:"dados_ciclo",fasePlanta:"germinacao",p1:dadosCicloP1,p2:dadosCicloP2})}).catch(()=>{});
+  fecharModal();
+}
+
+// ── EVENTOS ───────────────────────────────────────
+function carregarEventos(){
+  fetch(EVTS_URL).then(r=>r.text()).then(txt=>{
+    const json=JSON.parse(txt.replace(/^[^(]+\(|\);?$/g,""));
+    const rows=(json.table.rows||[]).filter(r=>r.c&&r.c[0]&&r.c[0].v);
+    for(const r of rows){
+      const c=r.c, tipo=c[2]?(c[2].v||")":""):"", desc=c[3]?(c[3].v||""):"";
+      if(tipo==="dados_ciclo_P1"&&!dadosCicloP1){try{dadosCicloP1=JSON.parse(desc);}catch(e){}}
+      if(tipo==="dados_ciclo_P2"&&!dadosCicloP2){try{dadosCicloP2=JSON.parse(desc);}catch(e){}}
+      if(tipo==="start_ciclo"&&!cicloModalAberto){
+        const ts=c[0]?(c[0].v||null):null;
+        if(ts){const dt=new Date(ts);if((Date.now()-dt.getTime())<2*3600*1000&&!dadosCicloP1)setTimeout(abrirModal,800);}
       }
     }
-  });
+    atualizarPlanta(0,0); atualizarPlanta(1,0);
+    const icones={start_ciclo:"🌱",galao_cheio:"💧",toggle_luz:"💡",desequilibrio_hidraulico:"⚠️",dados_ciclo_P1:"🌿",dados_ciclo_P2:"🌿"};
+    const itens=rows.slice(0,8).map(r=>{
+      const c=r.c,hora=c[1]?(c[1].v||""):"",tipo=c[2]?(c[2].v||""):"",desc=c[3]?(c[3].v||")":""):"";
+      return `<div class="evento-row"><span class="evento-hora">${hora}</span><div><p class="evento-tipo">${icones[tipo]||"•"} ${tipo}</p><p class="evento-desc">${desc.length>80?desc.substring(0,80)+"...":desc}</p></div></div>`;
+    }).join("");
+    document.getElementById("eventos-list").innerHTML=itens||'<p style="font-size:13px;color:var(--text-ter)">Nenhum evento registrado.</p>';
+  }).catch(()=>{});
 }
 
-function setJanela(btn,n){
-  janelaAtual=n;
-  document.querySelectorAll(".jbtn").forEach(b=>b.classList.remove("ativo"));
-  btn.classList.add("ativo");
-  if(todosOsDados.length) renderChart(todosOsDados);
-}
-
-function setFase(idx,fase){
-  const id=idx===0?"fase-p1":"fase-p2";
-  const infoId=idx===0?"info-p1":"info-p2";
-  document.querySelectorAll("#"+id+" .pill").forEach(p=>{
-    p.classList.toggle("ativa",p.textContent===fase);
-  });
-  document.getElementById(infoId).innerHTML="Fase atual: <strong>"+fase+"</strong>";
-}
-
-function preencherUI(dados){
-  todosOsDados = dados;
-  const d = dados[0];
-  const fi = fatorInfo(d.fator);
-  const st = document.getElementById("sg-status");
-  st.textContent="Ao vivo"; st.className="badge-live";
-  document.getElementById("diag-text").textContent = d.diag||"Sem diagnóstico";
-  document.getElementById("diag-ts").textContent = "Última leitura · "+d.ts;
-  document.getElementById("fator-num").textContent = d.fator.toFixed(1);
-  document.getElementById("fator-num").style.color = fi.cor;
-  document.getElementById("fator-bar").style.width = Math.min((d.fator/2)*100,100)+"%";
-  document.getElementById("fator-bar").style.background = fi.cor;
-  document.getElementById("fator-desc").textContent = fi.label;
-  document.getElementById("m-u1").innerHTML = d.u1+'<span class="metric-unit">%</span>';
-  document.getElementById("m-u2").innerHTML = d.u2+'<span class="metric-unit">%</span>';
-  document.getElementById("m-med").innerHTML = parseFloat(d.media).toFixed(1)+'<span class="metric-unit">%</span>';
-  document.getElementById("m-vol").innerHTML = d.vol+'<span class="metric-unit">mL</span>';
-  const boiaOk=d.boia===0;
-  document.getElementById("boia-dot").className="dot "+(boiaOk?"dot-ok":"dot-alert");
-  document.getElementById("boia-label").textContent=boiaOk?"Nível adequado":"ALERTA: Nível baixo";
-  document.getElementById("boia-ts").textContent="Atualizado: "+d.ts;
-  atualizarReservatorio();
-  renderChart(dados);
-}
-
+// ── DADOS PRINCIPAIS ──────────────────────────────
 function carregarDados(){
   const st=document.getElementById("sg-status");
-  st.textContent="Carregando..."; st.className="badge-load";
+  st.textContent="Carregando..."; st.className="badge badge-load";
   document.getElementById("sg-error").innerHTML="";
-  fetch(SHEET_URL)
-    .then(r=>r.text())
-    .then(txt=>{
-      const json=JSON.parse(txt.replace(/^[^(]+\(|\);?$/g,""));
-      const rows=json.table.rows;
-      const dados=rows
-        .filter(r=>r.c&&r.c[0]&&r.c[0].v)
-        .map(r=>{
-          const c=r.c;
-          const tsRaw=c[0]?(c[0].f||c[0].v||""):"";
-          const ts=String(tsRaw).substring(0,16);
-          return {
-            ts, u1:c[1]?(parseFloat(c[1].v)||0):0,
-            u2:c[2]?(parseFloat(c[2].v)||0):0,
-            boia:c[3]?(parseFloat(c[3].v)||0):0,
-            vol:c[4]?(parseFloat(c[4].v)||0):0,
-            media:c[5]?(parseFloat(c[5].v)||0):0,
-            fator:c[6]?(parseFloat(c[6].v)||1.0):1.0,
-            diag:c[7]?(c[7].v||""):"",
-          };
-        })
-        .filter(d=>d.diag&&!d.diag.startsWith("Erro")&&!d.diag.startsWith("Rate"));
-      if(!dados.length) throw new Error("Nenhum dado válido ainda. Aguarde o próximo ciclo do ESP32.");
-      preencherUI(dados);
-    })
-    .catch(err=>{
-      const st=document.getElementById("sg-status");
-      st.textContent="Erro"; st.className="badge-err";
-      document.getElementById("sg-error").innerHTML=
-        '<div class="err-box">Não foi possível carregar os dados: '+err.message+'</div>';
-    });
+  document.getElementById("sg-warn").innerHTML="";
+  document.getElementById("sg-alerta-ia").innerHTML="";
+
+  fetch(DADOS_URL).then(r=>r.text()).then(txt=>{
+    const json=JSON.parse(txt.replace(/^[^(]+\(|\);?$/g,""));
+    const rows=(json.table.rows||[]).filter(r=>r.c&&r.c[0]&&r.c[0].v);
+    const dados=rows.map(r=>{
+      const c=r.c;
+      return{
+        ts:   String(c[0]?(c[0].f||c[0].v||""):"").substring(0,16),
+        hora: c[1]?(c[1].v||""):"",
+        u1:   c[2]?(parseFloat(c[2].v)||0):0,
+        u2:   c[3]?(parseFloat(c[3].v)||0):0,
+        media:c[4]?(parseFloat(c[4].v)||0):0,
+        dif:  c[5]?(parseFloat(c[5].v)||0):0,
+        desequil:c[6]?(c[6].v||"NAO"):"NAO",
+        boia: c[7]?(parseFloat(c[7].v)||0):0,
+        vbase:c[8]?(parseFloat(c[8].v)||0):0,
+        vtotal:c[9]?(parseFloat(c[9].v)||0):0,
+        galaoMl:c[10]?(parseFloat(c[10].v)||7000):7000,
+        fase: c[11]?(c[11].v||"vegetacao"):"vegetacao",
+        diasCiclo:c[12]?(parseFloat(c[12].v)||0):0,
+        luzOn:c[13]?(c[13].v==="ON"):false,
+        fator:c[14]?(parseFloat(c[14].v)||1.0):1.0,
+        diag: c[15]?(c[15].v||""):"",
+        motivo:c[16]?(c[16].v||""):"",
+        alerta:c[17]?(c[17].v||""):"",
+      };
+    }).filter(d=>d.diag&&!d.diag.startsWith("Erro")&&!d.diag.startsWith("Rate"));
+
+    if(!dados.length) throw new Error("Nenhum dado válido ainda. Aguarde o próximo ciclo do ESP32.");
+    todosOsDados=dados;
+    const d=dados[0], fi=fatorInfo(d.fator);
+
+    st.textContent="Ao vivo"; st.className="badge badge-live";
+
+    if(d.desequil==="SIM")
+      document.getElementById("sg-warn").innerHTML=`<div class="card-warn"><div class="warn-dot"></div><span style="font-size:13px">Desequilíbrio hidráulico — diferença de ${d.dif}% entre os vasos. Verifique o sistema de irrigação.</span></div>`;
+    if(d.alerta)
+      document.getElementById("sg-alerta-ia").innerHTML=`<div class="card-warn"><div class="warn-dot"></div><span style="font-size:13px"><strong>IA:</strong> ${d.alerta}</span></div>`;
+
+    document.getElementById("diag-text").textContent=d.diag;
+    document.getElementById("diag-ts").textContent=`Última leitura · ${d.hora||d.ts}`;
+    if(d.motivo){document.getElementById("sec-motivo").classList.remove("hidden");document.getElementById("motivo-text").textContent=d.motivo;}
+
+    document.getElementById("fator-num").textContent=d.fator.toFixed(1);
+    document.getElementById("fator-num").style.color=fi.cor;
+    document.getElementById("fator-bar").style.width=Math.min((d.fator/2)*100,100)+"%";
+    document.getElementById("fator-bar").style.background=fi.cor;
+    document.getElementById("fator-desc").textContent=fi.label;
+
+    document.getElementById("m-u1").innerHTML=d.u1+'<span class="metric-unit">%</span>';
+    document.getElementById("m-u2").innerHTML=d.u2+'<span class="metric-unit">%</span>';
+    document.getElementById("m-med").innerHTML=d.media.toFixed(1)+'<span class="metric-unit">%</span>';
+    document.getElementById("m-vbase").innerHTML=d.vbase+'<span class="metric-unit">mL</span>';
+    document.getElementById("m-vtotal").innerHTML=d.vtotal+'<span class="metric-unit">mL</span>';
+
+    atualizarLuz(d.fase, d.luzOn);
+    atualizarPlanta(0, d.diasCiclo);
+    atualizarPlanta(1, d.diasCiclo);
+
+    const ok=d.boia===0;
+    document.getElementById("boia-dot").className="dot "+(ok?"dot-ok":"dot-alert");
+    document.getElementById("boia-label").textContent=ok?"Nível adequado":"ALERTA: Nível baixo";
+    document.getElementById("boia-ts").textContent=`Atualizado: ${d.hora||d.ts}`;
+
+    atualizarReservatorio(d.galaoMl, d.vbase, d.vtotal);
+    renderChart(dados);
+    carregarEventos();
+  }).catch(err=>{
+    st.textContent="Erro"; st.className="badge badge-err";
+    document.getElementById("sg-error").innerHTML=`<div class="err-box">Não foi possível carregar: ${err.message}</div>`;
+  });
 }
 
 carregarDados();
