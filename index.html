@@ -505,14 +505,39 @@ function carregarEventos(){
       if(tipo==="dados_ciclo_P1"&&!dadosCicloP1){try{dadosCicloP1=JSON.parse(desc);}catch(e){}}
       if(tipo==="dados_ciclo_P2"&&!dadosCicloP2){try{dadosCicloP2=JSON.parse(desc);}catch(e){}}
       if(tipo==="start_ciclo"&&!cicloModalAberto){
-        const ts=c[0]?(c[0].v||null):null;
-        if(ts){const dt=new Date(ts);if((Date.now()-dt.getTime())<2*3600*1000&&!dadosCicloP1)setTimeout(abrirModal,800);}
+        // Sheets retorna timestamp como string "Date(ano,mes,dia,h,m,s)" — parseia corretamente
+        const tsRaw=c[0]?(c[0].v||null):null;
+        if(tsRaw){
+          let dt;
+          if(typeof tsRaw==="string"&&tsRaw.startsWith("Date(")){
+            const p=tsRaw.replace("Date(","").replace(")","").split(",").map(Number);
+            dt=new Date(p[0],p[1],p[2],p[3]||0,p[4]||0,p[5]||0);
+          } else {
+            dt=new Date(tsRaw);
+          }
+          if(!isNaN(dt)&&(Date.now()-dt.getTime())<2*3600*1000&&!dadosCicloP1){
+            setTimeout(abrirModal,800);
+          }
+        }
       }
     }
     atualizarPlanta(0,0); atualizarPlanta(1,0);
     const icones={start_ciclo:"🌱",galao_cheio:"💧",toggle_luz:"💡",desequilibrio_hidraulico:"⚠️",dados_ciclo_P1:"🌿",dados_ciclo_P2:"🌿"};
     const itens=rows.slice(0,8).map(r=>{
-      const c=r.c,hora=String(c[1]&&c[1].v!=null?c[1].v:""),tipo=String(c[2]&&c[2].v!=null?c[2].v:""),desc=String(c[3]&&c[3].v!=null?c[3].v:"");
+      const c=r.c;
+      // Hora: pode vir como "HH:MM" string ou como fração decimal do dia
+      let hora="";
+      if(c[1]&&c[1].v!=null){
+        const hv=c[1].v;
+        if(typeof hv==="string") hora=hv;
+        else if(typeof hv==="number"){
+          // fração do dia → HH:MM
+          const totalMin=Math.round(hv*24*60);
+          const hh=Math.floor(totalMin/60)%24, mm=totalMin%60;
+          hora=String(hh).padStart(2,"0")+":"+String(mm).padStart(2,"0");
+        }
+      }
+      const tipo=String(c[2]&&c[2].v!=null?c[2].v:""),desc=String(c[3]&&c[3].v!=null?c[3].v:"");
       return `<div class="evento-row"><span class="evento-hora">${hora}</span><div><p class="evento-tipo">${icones[tipo]||"•"} ${tipo}</p><p class="evento-desc">${desc.length>80?desc.substring(0,80)+"...":desc}</p></div></div>`;
     }).join("");
     document.getElementById("eventos-list").innerHTML=itens||'<p style="font-size:13px;color:var(--text-ter)">Nenhum evento registrado.</p>';
