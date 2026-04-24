@@ -355,7 +355,7 @@
 
 <script>
 const SHEET_ID  = "1cK0y2--PLGAo00W_UP4Ix53qcAVyQU9Na-uDlvNjYXo";
-const GAS_URL   = "https://script.google.com/macros/s/AKfycbyX8QFD4Ll265edbb_xpUFqzS1_8qKJPc8ztiqSQeuVdX06N1p9fpFKt9eDvp6Yb89FGQ/exec";
+const GAS_URL   = "https://script.google.com/macros/s/AKfycby56nn56erEcdsAG06Rg5wnkjVYau9uWnO73KT0MjMzk7uPJYujvms41aMHNYtu0IHt-A/exec";
 const DADOS_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=DADOS`;
 const EVTS_URL  = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=EVENTOS`;
 
@@ -530,29 +530,34 @@ function carregarDados(){
   fetch(DADOS_URL).then(r=>r.text()).then(txt=>{
     const json=JSON.parse(txt.replace(/^[^(]+\(|\);?$/g,""));
     const rows=(json.table.rows||[]).filter(r=>r.c&&r.c[0]&&r.c[0].v);
+    // Índices das 17 colunas da aba DADOS:
+    // 0:Timestamp 1:Hora 2:U1 3:U2 4:Média 5:Dif 6:Desequil 7:Boia
+    // 8:Vol/Vaso 9:VolTotal 10:Galão 11:Fase 12:DiasCiclo 13:Luz
+    // 14:FatorRega 15:DiagIA 16:Motivo 17:AlertaLP
+    const sv=(c,i,df="")=>{if(!c[i]||c[i].v==null)return df;return String(c[i].v);};
+    const nv=(c,i,df=0)=>{if(!c[i]||c[i].v==null)return df;return parseFloat(c[i].v)||df;};
     const dados=rows.map(r=>{
       const c=r.c;
       return{
-        ts:   String(c[0]?(c[0].f||c[0].v||""):"").substring(0,16),
-        hora: c[1]?(c[1].v||""):"",
-        u1:   c[2]?(parseFloat(c[2].v)||0):0,
-        u2:   c[3]?(parseFloat(c[3].v)||0):0,
-        media:c[4]?(parseFloat(c[4].v)||0):0,
-        dif:  c[5]?(parseFloat(c[5].v)||0):0,
-        desequil:c[6]?(c[6].v||"NAO"):"NAO",
-        boia: c[7]?(parseFloat(c[7].v)||0):0,
-        vbase:c[8]?(parseFloat(c[8].v)||0):0,
-        vtotal:c[9]?(parseFloat(c[9].v)||0):0,
-        galaoMl:c[10]?(parseFloat(c[10].v)||7000):7000,
-        fase: c[11]?(c[11].v||"vegetacao"):"vegetacao",
-        diasCiclo:c[12]?(parseFloat(c[12].v)||0):0,
-        luzOn:c[13]?(c[13].v==="ON"):false,
-        fator:c[14]?(parseFloat(c[14].v)||1.0):1.0,
-        diag: c[15]?(c[15].v||""):"",
-        motivo:c[16]?(c[16].v||""):"",
-        alerta:c[17]?(c[17].v||""):"",
+        ts:       String(c[0]?(c[0].f||c[0].v||""):"").substring(0,16),
+        hora:     sv(c,1),
+        u1:       nv(c,2), u2:nv(c,3), media:nv(c,4), dif:nv(c,5),
+        desequil: sv(c,6,"NAO"),
+        boia:     nv(c,7),
+        vbase:    nv(c,8), vtotal:nv(c,9),
+        galaoMl:  nv(c,10,7000),
+        fase:     sv(c,11,"vegetacao"),
+        diasCiclo:nv(c,12),
+        luzOn:    sv(c,13)==="ON",
+        fator:    nv(c,14,1.0),
+        diag:     sv(c,15),
+        motivo:   sv(c,16),
+        alerta:   sv(c,17),
       };
-    }).filter(d=>d.diag&&!d.diag.startsWith("Erro")&&!d.diag.startsWith("Rate"));
+    }).filter(d=>{
+      const g=d.diag;
+      return g && !g.startsWith("Erro") && !g.startsWith("Rate") && !g.startsWith("?");
+    });
 
     if(!dados.length) throw new Error("Nenhum dado válido ainda. Aguarde o próximo ciclo do ESP32.");
     todosOsDados=dados;
