@@ -501,7 +501,7 @@ function carregarEventos(){
     const json=JSON.parse(txt.replace(/^[^(]+\(|\);?$/g,""));
     const rows=(json.table.rows||[]).filter(r=>r.c&&r.c[0]&&r.c[0].v);
     for(const r of rows){
-      const c=r.c, tipo=c[2]?(c[2].v||")":""):"", desc=c[3]?(c[3].v||""):"";
+      const c=r.c, tipo=String(c[2]&&c[2].v!=null?c[2].v:""), desc=String(c[3]&&c[3].v!=null?c[3].v:"");
       if(tipo==="dados_ciclo_P1"&&!dadosCicloP1){try{dadosCicloP1=JSON.parse(desc);}catch(e){}}
       if(tipo==="dados_ciclo_P2"&&!dadosCicloP2){try{dadosCicloP2=JSON.parse(desc);}catch(e){}}
       if(tipo==="start_ciclo"&&!cicloModalAberto){
@@ -512,7 +512,7 @@ function carregarEventos(){
     atualizarPlanta(0,0); atualizarPlanta(1,0);
     const icones={start_ciclo:"🌱",galao_cheio:"💧",toggle_luz:"💡",desequilibrio_hidraulico:"⚠️",dados_ciclo_P1:"🌿",dados_ciclo_P2:"🌿"};
     const itens=rows.slice(0,8).map(r=>{
-      const c=r.c,hora=c[1]?(c[1].v||""):"",tipo=c[2]?(c[2].v||""):"",desc=c[3]?(c[3].v||")":""):"";
+      const c=r.c,hora=String(c[1]&&c[1].v!=null?c[1].v:""),tipo=String(c[2]&&c[2].v!=null?c[2].v:""),desc=String(c[3]&&c[3].v!=null?c[3].v:"");
       return `<div class="evento-row"><span class="evento-hora">${hora}</span><div><p class="evento-tipo">${icones[tipo]||"•"} ${tipo}</p><p class="evento-desc">${desc.length>80?desc.substring(0,80)+"...":desc}</p></div></div>`;
     }).join("");
     document.getElementById("eventos-list").innerHTML=itens||'<p style="font-size:13px;color:var(--text-ter)">Nenhum evento registrado.</p>';
