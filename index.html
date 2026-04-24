@@ -351,6 +351,13 @@
       <p style="font-size:13px;color:var(--text-ter)">Carregando eventos...</p>
     </div>
   </div>
+
+  <div class="sec" id="sec-historico" style="display:none">
+    <p class="lbl">Histórico de Ciclos</p>
+    <div class="card" id="historico-list">
+      <p style="font-size:13px;color:var(--text-ter)">Carregando histórico...</p>
+    </div>
+  </div>
 </main>
 
 <script>
@@ -454,7 +461,388 @@ function setFase(idx,fase){
   document.querySelectorAll(`#${id} .pill`).forEach(p=>p.classList.toggle("ativa",p.textContent===fase));
   document.getElementById(ii).innerHTML=`Fase atual: <strong>${fase}</strong>`;
 }
-function colherPlanta(n){if(confirm(`Registrar colheita da Planta ${n}? O ciclo será encerrado no histórico.`))alert(`Colheita da Planta ${n} registrada!`);}
+function colherPlanta(numPlanta) {
+  if (!confirm(`Registrar colheita da Planta ${numPlanta}?\nIsso vai gerar o relatório PDF e salvar o ciclo no histórico.`)) return;
+
+  const dadosCiclo = numPlanta === 1 ? dadosCicloP1 : dadosCicloP2;
+  const statusEl   = document.getElementById("sg-status");
+  statusEl.textContent = "Gerando PDF...";
+  statusEl.className   = "badge badge-load";
+
+  // Busca todos os dados da planilha para o relatório
+  fetch(DADOS_URL)
+    .then(r => r.text())
+    .then(txt => {
+      const json = JSON.parse(txt.replace(/^[^(]+\(|\);?$/g, ""));
+      const rows = (json.table.rows || []).filter(r => r.c && r.c[0] && r.c[0].v);
+      const dados = rows.map(r => {
+        const c = r.c;
+        const sv = (i, df="") => c[i] && c[i].v != null ? String(c[i].v) : df;
+        const nv = (i, df=0)  => c[i] && c[i].v != null ? parseFloat(c[i].v) || df : df;
+        return {
+          ts: String(c[0] ? (c[0].f || c[0].v || "") : "").substring(0, 16),
+          hora: sv(1), u1: nv(2), u2: nv(3), media: nv(4),
+          vbase: nv(8), vtotal: nv(9), fase: sv(11, "vegetacao"),
+          diasCiclo: nv(12), luzOn: sv(13) === "ON",
+          fator: nv(14, 1.0), diag: sv(15),
+        };
+      }).filter(d => d.diag && !d.diag.startsWith("Erro"));
+
+      gerarRelatorioPDF(numPlanta, dadosCiclo, dados);
+    })
+    .catch(err => {
+      alert("Erro ao buscar dados: " + err.message);
+      statusEl.textContent = "Ao vivo"; statusEl.className = "badge badge-live";
+    });
+}
+
+// ── GERADOR DE PDF ────────────────────────────────
+function gerarRelatorioPDF(numPlanta, ciclo, dados) {
+  // Cálculos do ciclo
+  const totalDias      = ciclo ? (diasEntre(ciclo.germinacao) || 0) : 0;
+  const diasSmartGrow  = ciclo ? (diasEntre(ciclo.smartgrow)  || 0) : 0;
+  const totalAgua      = dados.reduce((s, d) => s + d.vtotal, 0);
+  const mediaUmidade   = dados.length ? (dados.reduce((s,d) => s+d.media, 0) / dados.length).toFixed(1) : "--";
+  const maxFator       = dados.length ? Math.max(...dados.map(d => d.fator)).toFixed(1) : "--";
+
+  // Agrupa por fase
+  const fases = {};
+  dados.forEach(d => {
+    if (!fases[d.fase]) fases[d.fase] = { count: 0, agua: 0, umidadeSum: 0 };
+    fases[d.fase].count++;
+    fases[d.fase].agua += d.vtotal;
+    fases[d.fase].umidadeSum += d.media;
+  });
+
+  // Últimas leituras para resumo
+  const ultimas = dados.slice(0, 10);
+  const primeiras= dados.slice(-10).reverse();
+
+  // Diagnósticos únicos marcantes
+  const diagsUnicos = [...new Set(dados.map(d=>d.diag).filter(d=>d&&d.length>5))].slice(0,6);
+
+  // Dados semanais para gráfico
+  const porSemana = [];
+  const passo = Math.max(1, Math.floor(dados.length / 12));
+  for (let i = dados.length-1; i >= 0; i -= passo) {
+    porSemana.push({ ts: dados[i].ts.substring(5,10), media: dados[i].media, vtotal: dados[i].vtotal });
+  }
+  porSemana.reverse();
+
+  // Gera SVG do gráfico de umidade
+  const svgUmidade = gerarSVGUmidade(porSemana);
+  const svgAgua    = gerarSVGAgua(porSemana);
+
+  // Resumo compacto para storage (max ~50KB)
+  const resumoCiclo = {
+    id:          Date.now(),
+    planta:      numPlanta,
+    dataColheita:new Date().toLocaleDateString("pt-BR"),
+    germinacao:  ciclo ? ciclo.germinacao : "",
+    smartgrow:   ciclo ? ciclo.smartgrow  : "",
+    alturaEntrada: ciclo ? ciclo.altura   : "",
+    totalDias, diasSmartGrow,
+    totalAguaML: Math.round(totalAgua),
+    mediaUmidade: parseFloat(mediaUmidade),
+    maxFator:    parseFloat(maxFator),
+    totalLeituras: dados.length,
+    fases: Object.entries(fases).map(([f,v]) => ({
+      fase: f,
+      leituras: v.count,
+      aguaML: Math.round(v.agua),
+      umidadeMedia: (v.umidadeSum/v.count).toFixed(1)
+    })),
+    diagsMarcos: diagsUnicos,
+  };
+
+  // Salva no storage persistente
+  salvarCicloNoHistorico(resumoCiclo);
+
+  // Monta HTML do PDF
+  const html = montarHTMLRelatorio(numPlanta, ciclo, resumoCiclo, svgUmidade, svgAgua, diagsUnicos);
+
+  // Abre janela de impressão / save as PDF
+  const janela = window.open("", "_blank");
+  janela.document.write(html);
+  janela.document.close();
+  setTimeout(() => {
+    janela.focus();
+    janela.print();
+  }, 800);
+
+  document.getElementById("sg-status").textContent = "Ao vivo";
+  document.getElementById("sg-status").className   = "badge badge-live";
+}
+
+function gerarSVGUmidade(pontos) {
+  if (!pontos.length) return "";
+  const W=560, H=120, pad=30;
+  const max=100, min=0;
+  const xs = pontos.map((_,i) => pad + i*(W-2*pad)/(Math.max(pontos.length-1,1)));
+  const y  = v => H - pad - (v-min)/(max-min)*(H-2*pad);
+  const pts = pontos.map((p,i) => `${xs[i]},${y(p.media)}`).join(" ");
+  const labels = pontos.filter((_,i) => i % Math.max(1,Math.floor(pontos.length/6)) === 0);
+  const lxs    = labels.map((_,i) => xs[i * Math.max(1,Math.floor(pontos.length/6))]);
+  return `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:560px">
+    <rect width="${W}" height="${H}" fill="#f9faf9" rx="4"/>
+    <line x1="${pad}" y1="${y(75)}" x2="${W-pad}" y2="${y(75)}" stroke="#4a7c59" stroke-width="0.5" stroke-dasharray="4,3"/>
+    <line x1="${pad}" y1="${y(35)}" x2="${W-pad}" y2="${y(35)}" stroke="#BA7517" stroke-width="0.5" stroke-dasharray="4,3"/>
+    <text x="${W-pad+2}" y="${y(75)+4}" font-size="8" fill="#4a7c59">75%</text>
+    <text x="${W-pad+2}" y="${y(35)+4}" font-size="8" fill="#BA7517">35%</text>
+    <polyline points="${pts}" fill="none" stroke="#378ADD" stroke-width="1.5" stroke-linejoin="round"/>
+    ${labels.map((p,i)=>`<text x="${lxs[i]}" y="${H-4}" font-size="8" fill="#888" text-anchor="middle">${p.ts}</text>`).join("")}
+    <text x="${pad-2}" y="${pad-6}" font-size="9" fill="#444" font-weight="bold">Umidade Média do Solo (%)</text>
+  </svg>`;
+}
+
+function gerarSVGAgua(pontos) {
+  if (!pontos.length) return "";
+  const W=560, H=100, pad=30;
+  const maxV = Math.max(...pontos.map(p=>p.vtotal), 1);
+  const bw = (W-2*pad)/pontos.length - 2;
+  const bars = pontos.map((p,i) => {
+    const bh = (p.vtotal/maxV)*(H-2*pad);
+    const bx = pad + i*((W-2*pad)/pontos.length);
+    const by = H-pad-bh;
+    return `<rect x="${bx}" y="${by}" width="${bw}" height="${bh}" fill="#639922" rx="2" opacity="0.8"/>`;
+  }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:560px">
+    <rect width="${W}" height="${H}" fill="#f9faf9" rx="4"/>
+    ${bars}
+    <text x="${pad-2}" y="${pad-6}" font-size="9" fill="#444" font-weight="bold">Volume de Água por Rega (mL)</text>
+  </svg>`;
+}
+
+function montarHTMLRelatorio(numPlanta, ciclo, r, svgUmidade, svgAgua, diags) {
+  const faseNomes = {germinacao:"Germinação",vegetacao:"Vegetação",floracao:"Floração"};
+  const fasesHTML = r.fases.map(f => `
+    <tr>
+      <td>${faseNomes[f.fase]||f.fase}</td>
+      <td>${f.leituras}</td>
+      <td>${f.aguaML} mL</td>
+      <td>${f.umidadeMedia}%</td>
+    </tr>`).join("");
+
+  return `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>SmartGrow — Relatório Planta ${numPlanta}</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=DM+Mono&display=swap');
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'DM Sans',sans-serif;color:#1a1a18;background:#fff;padding:40px;max-width:800px;margin:0 auto;font-size:13px}
+  @media print{body{padding:20px} .no-print{display:none}}
+
+  /* CAPA */
+  .capa{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:40px;padding-bottom:24px;border-bottom:3px solid #4a7c59}
+  .logo-area h1{font-size:28px;color:#4a7c59;font-weight:700;margin:0}
+  .logo-area p{font-size:12px;color:#888;margin:2px 0 0}
+  .capa-meta{text-align:right}
+  .capa-meta .badge-planta{background:#4a7c59;color:#fff;font-size:11px;padding:3px 12px;border-radius:20px;display:inline-block;margin-bottom:6px}
+  .capa-meta h2{font-size:18px;font-weight:500;margin:4px 0}
+  .capa-meta p{font-size:11px;color:#888}
+
+  /* SEÇÕES */
+  .sec{margin-bottom:28px}
+  .sec-title{font-size:11px;font-weight:700;color:#4a7c59;text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px;padding-bottom:4px;border-bottom:1px solid #e8f2eb}
+
+  /* CARDS DE RESUMO */
+  .resumo-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
+  .resumo-card{background:#f4f4f1;border-radius:8px;padding:10px 14px}
+  .resumo-card .val{font-size:22px;font-weight:500;font-family:'DM Mono',monospace;color:#1a1a18}
+  .resumo-card .lbl{font-size:10px;color:#888;margin-top:2px}
+
+  /* TABELA */
+  table{width:100%;border-collapse:collapse;font-size:12px}
+  th{background:#e8f2eb;color:#1B5E20;font-weight:600;padding:7px 10px;text-align:left;font-size:11px}
+  td{padding:6px 10px;border-bottom:1px solid #f0f0f0}
+  tr:last-child td{border-bottom:none}
+
+  /* DIAGNÓSTICOS */
+  .diag-item{background:#f9faf9;border-left:3px solid #4a7c59;padding:6px 10px;margin-bottom:6px;border-radius:0 4px 4px 0;font-size:12px}
+
+  /* LINHA DO TEMPO */
+  .timeline-item{display:flex;gap:12px;margin-bottom:8px;align-items:flex-start}
+  .tl-dot{width:8px;height:8px;border-radius:50%;background:#4a7c59;flex-shrink:0;margin-top:3px}
+  .tl-content p{font-size:12px;margin:0}
+  .tl-content span{font-size:10px;color:#888}
+
+  /* RODAPÉ */
+  .rodape{margin-top:40px;padding-top:16px;border-top:1px solid #e0e0e0;display:flex;justify-content:space-between;font-size:10px;color:#aaa}
+
+  /* SVG */
+  .grafico{margin:10px 0;background:#f9faf9;border-radius:8px;padding:12px}
+</style>
+</head>
+<body>
+
+<!-- CAPA -->
+<div class="capa">
+  <div class="logo-area">
+    <h1>SmartGrow</h1>
+    <p>Sistema de Cultivo Indoor Automatizado</p>
+    <p style="margin-top:8px;font-size:11px;color:#4a7c59">Relatório de Ciclo — Auditoria de Cultivo</p>
+  </div>
+  <div class="capa-meta">
+    <span class="badge-planta">Planta ${numPlanta} — Vaso ${numPlanta}</span>
+    <h2>Ciclo Encerrado</h2>
+    <p>Colheita: ${r.dataColheita}</p>
+    <p>Gerado por SmartGrow v1.0</p>
+  </div>
+</div>
+
+<!-- RESUMO EXECUTIVO -->
+<div class="sec">
+  <p class="sec-title">Resumo Executivo</p>
+  <div class="resumo-grid">
+    <div class="resumo-card">
+      <p class="val">${r.totalDias}</p>
+      <p class="lbl">dias de vida total</p>
+    </div>
+    <div class="resumo-card">
+      <p class="val">${r.diasSmartGrow}</p>
+      <p class="lbl">dias no SmartGrow</p>
+    </div>
+    <div class="resumo-card">
+      <p class="val">${(r.totalAguaML/1000).toFixed(1)}L</p>
+      <p class="lbl">água total consumida</p>
+    </div>
+    <div class="resumo-card">
+      <p class="val">${r.mediaUmidade}%</p>
+      <p class="lbl">umidade média do ciclo</p>
+    </div>
+  </div>
+  <div class="resumo-grid">
+    <div class="resumo-card">
+      <p class="val">${ciclo ? ciclo.altura || "--" : "--"}cm</p>
+      <p class="lbl">altura de entrada</p>
+    </div>
+    <div class="resumo-card">
+      <p class="val">${r.maxFator}</p>
+      <p class="lbl">fator rega máximo</p>
+    </div>
+    <div class="resumo-card">
+      <p class="val">${r.totalLeituras}</p>
+      <p class="lbl">leituras registradas</p>
+    </div>
+    <div class="resumo-card">
+      <p class="val">${r.fases.length}</p>
+      <p class="lbl">fases completadas</p>
+    </div>
+  </div>
+</div>
+
+<!-- LINHA DO TEMPO DO CICLO -->
+<div class="sec">
+  <p class="sec-title">Linha do Tempo</p>
+  <div class="timeline-item">
+    <div class="tl-dot"></div>
+    <div class="tl-content">
+      <p><strong>Germinação</strong></p>
+      <span>${ciclo ? fmtData(ciclo.germinacao) : "--"}</span>
+    </div>
+  </div>
+  <div class="timeline-item">
+    <div class="tl-dot"></div>
+    <div class="tl-content">
+      <p><strong>Primeiro vaso (potinho)</strong></p>
+      <span>${ciclo ? fmtData(ciclo.vaso1) : "--"}</span>
+    </div>
+  </div>
+  <div class="timeline-item">
+    <div class="tl-dot"></div>
+    <div class="tl-content">
+      <p><strong>Entrada no SmartGrow</strong> — ${ciclo ? ciclo.altura || "--" : "--"}cm de altura</p>
+      <span>${ciclo ? fmtData(ciclo.smartgrow) : "--"}</span>
+    </div>
+  </div>
+  <div class="timeline-item">
+    <div class="tl-dot" style="background:#E24B4A"></div>
+    <div class="tl-content">
+      <p><strong>Colheita</strong></p>
+      <span>${r.dataColheita}</span>
+    </div>
+  </div>
+</div>
+
+<!-- CONSUMO POR FASE -->
+<div class="sec">
+  <p class="sec-title">Consumo por Fase</p>
+  <table>
+    <tr>
+      <th>Fase</th>
+      <th>Leituras</th>
+      <th>Água Total</th>
+      <th>Umidade Média</th>
+    </tr>
+    ${fasesHTML}
+  </table>
+</div>
+
+<!-- GRÁFICOS -->
+<div class="sec">
+  <p class="sec-title">Histórico de Umidade do Solo</p>
+  <div class="grafico">${svgUmidade}</div>
+  <p style="font-size:10px;color:#888;margin-top:4px">Linha verde = alvo 75% | Linha laranja = mínimo 35%</p>
+</div>
+
+<div class="sec">
+  <p class="sec-title">Volume de Rega ao Longo do Ciclo</p>
+  <div class="grafico">${svgAgua}</div>
+</div>
+
+<!-- DIAGNÓSTICOS DA IA -->
+<div class="sec">
+  <p class="sec-title">Diagnósticos Marcantes da IA</p>
+  ${diags.map(d => `<div class="diag-item">${d}</div>`).join("") || '<p style="color:#888;font-size:12px">Nenhum diagnóstico registrado.</p>'}
+</div>
+
+<!-- RODAPÉ -->
+<div class="rodape">
+  <span>SmartGrow — Sistema de Cultivo Indoor Automatizado</span>
+  <span>Planta ${numPlanta} · Ciclo encerrado em ${r.dataColheita}</span>
+</div>
+
+<script>
+  window.onload = function() {
+    // Pequeno delay para garantir que fontes e SVGs carregaram
+    setTimeout(function() {
+      window.print();
+    }, 500);
+  };
+<\/script>
+</body>
+</html>`;
+}
+
+// ── STORAGE PERSISTENTE ────────────────────────────
+async function salvarCicloNoHistorico(resumo) {
+  try {
+    // Busca histórico existente
+    let historico = [];
+    try {
+      const existing = await window.storage.get("historico_ciclos");
+      if (existing) historico = JSON.parse(existing.value);
+    } catch(e) {}
+
+    historico.push(resumo);
+    await window.storage.set("historico_ciclos", JSON.stringify(historico));
+    console.log("[STORAGE] Ciclo salvo no histórico");
+  } catch(e) {
+    console.warn("[STORAGE] Falha ao salvar:", e);
+  }
+}
+
+async function carregarHistorico() {
+  try {
+    const result = await window.storage.get("historico_ciclos");
+    if (!result) return [];
+    return JSON.parse(result.value);
+  } catch(e) {
+    return [];
+  }
+}
 
 // ── GRÁFICO ───────────────────────────────────────
 function renderChart(dados){
@@ -621,6 +1009,29 @@ function carregarDados(){
 }
 
 carregarDados();
+
+// Carrega histórico de ciclos anteriores
+carregarHistorico().then(historico => {
+  if (!historico || !historico.length) return;
+  document.getElementById("sec-historico").style.display = "block";
+  const faseNomes = {germinacao:"Germinação",vegetacao:"Vegetação",floracao:"Floração"};
+  const html = historico.slice().reverse().map(c => `
+    <div style="padding:12px 0;border-bottom:1px solid var(--border)">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <span style="font-size:13px;font-weight:500">Planta ${c.planta} — ${c.dataColheita}</span>
+        <span style="font-size:11px;color:var(--text-ter)">${c.totalDias} dias de vida · ${(c.totalAguaML/1000).toFixed(1)}L consumidos</span>
+      </div>
+      <div style="display:flex;gap:16px;font-size:11px;color:var(--text-sec)">
+        <span>Entrada: ${c.alturaEntrada||"--"}cm</span>
+        <span>No SmartGrow: ${c.diasSmartGrow} dias</span>
+        <span>Umidade média: ${c.mediaUmidade}%</span>
+        <span>Leituras: ${c.totalLeituras}</span>
+      </div>
+    </div>
+  `).join("");
+  document.getElementById("historico-list").innerHTML = html ||
+    '<p style="font-size:13px;color:var(--text-ter)">Nenhum ciclo encerrado ainda.</p>';
+});
 </script>
 </body>
 </html>
