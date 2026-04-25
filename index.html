@@ -823,7 +823,7 @@ function renderChart(dados){
   if(chartInst) chartInst.destroy();
   chartInst=new Chart(document.getElementById("sg-chart"),{
     type:"line",
-    data:{labels:slice.map(d=>d.hora||d.ts),datasets:[
+    data:{labels:slice.map(d=>d.hora||(d.ts?d.ts.substring(11,16):"--")),datasets:[
       {label:"Vaso 1",data:slice.map(d=>d.u1),borderColor:"#378ADD",backgroundColor:"transparent",borderWidth:1.5,pointRadius:3,tension:0.3},
       {label:"Vaso 2",data:slice.map(d=>d.u2),borderColor:"#639922",backgroundColor:"transparent",borderWidth:1.5,pointRadius:3,tension:0.3},
       {label:"Média",data:slice.map(d=>d.media),borderColor:"#888780",backgroundColor:"transparent",borderWidth:1,borderDash:[4,3],pointRadius:2,tension:0.3},
@@ -858,6 +858,102 @@ function fecharModal(){
   const cicloId = document.getElementById("modal-ciclo").dataset.cicloId;
   if(cicloId) localStorage.setItem("sg_ciclo_respondido", String(cicloId));
 }
+function toggleForm(n){
+  const f=document.getElementById("form-p"+n);
+  if(!f) return;
+  const aberto = f.style.display==="block";
+  f.style.display = aberto ? "none" : "block";
+  if(!aberto) preencherFormulario(n);
+}
+
+function preencherFormulario(n){
+  const dados = n===1 ? dadosCicloP1 : dadosCicloP2;
+  const p = n===1 ? "p1" : "p2";
+  if(!dados) return;
+  if(dados.germinacao) document.getElementById(p+"-germ").value      = dados.germinacao;
+  if(dados.vaso1)      document.getElementById(p+"-vaso1").value     = dados.vaso1;
+  if(dados.altura)     document.getElementById(p+"-altura").value    = dados.altura;
+  if(dados.smartgrow)  document.getElementById(p+"-smartgrow").value = dados.smartgrow;
+}
+
+function preencherFormularios(){
+  if(dadosCicloP1) preencherFormulario(1);
+  if(dadosCicloP2) preencherFormulario(2);
+}
+
+function salvarDadosPlanta(n){
+  const p = n===1 ? "p1" : "p2";
+  const dados = {
+    germinacao: document.getElementById(p+"-germ").value,
+    vaso1:      document.getElementById(p+"-vaso1").value,
+    altura:     document.getElementById(p+"-altura").value,
+    smartgrow:  document.getElementById(p+"-smartgrow").value,
+  };
+  if(n===1) dadosCicloP1=dados; else dadosCicloP2=dados;
+  atualizarPlanta(n-1, 0);
+  document.getElementById("form-p"+n).style.display="none";
+  const payload={tipo:"dados_ciclo",fasePlanta:"germinacao"};
+  payload[p]=dados;
+  fetch(GAS_URL,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)})
+    .then(()=>{ mostrarToastDash("Dados da Planta "+n+" salvos!"); })
+    .catch(()=>{});
+}
+
+function mostrarToastDash(msg){
+  const st=document.getElementById("sg-status");
+  const prev=st.textContent;
+  st.textContent=msg; st.className="badge badge-live";
+  setTimeout(()=>{ st.textContent=prev; },2500);
+}
+
+function toggleForm(n){
+  const f=document.getElementById("form-p"+n);
+  const aberto=f.style.display!=="none";
+  f.style.display=aberto?"none":"block";
+  if(!aberto) preencherFormulario(n);
+}
+
+function preencherFormulario(n){
+  const dados=n===1?dadosCicloP1:dadosCicloP2;
+  const p=n===1?"p1":"p2";
+  if(!dados) return;
+  if(dados.germinacao) document.getElementById(p+"-germ").value     =dados.germinacao;
+  if(dados.vaso1)      document.getElementById(p+"-vaso1").value    =dados.vaso1;
+  if(dados.altura)     document.getElementById(p+"-altura").value   =dados.altura;
+  if(dados.smartgrow)  document.getElementById(p+"-smartgrow").value=dados.smartgrow;
+}
+
+function preencherFormularios(){
+  if(dadosCicloP1) preencherFormulario(1);
+  if(dadosCicloP2) preencherFormulario(2);
+}
+
+function salvarDadosPlanta(n){
+  const p=n===1?"p1":"p2";
+  const dados={
+    germinacao:document.getElementById(p+"-germ").value,
+    vaso1:     document.getElementById(p+"-vaso1").value,
+    altura:    document.getElementById(p+"-altura").value,
+    smartgrow: document.getElementById(p+"-smartgrow").value,
+  };
+  if(n===1) dadosCicloP1=dados; else dadosCicloP2=dados;
+  atualizarPlanta(n-1,0);
+  document.getElementById("form-p"+n).style.display="none";
+  const payload={tipo:"dados_ciclo",fasePlanta:"germinacao"};
+  payload[p]=dados;
+  fetch(GAS_URL,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)})
+    .then(()=>mostrarToast("Dados salvos!"))
+    .catch(()=>mostrarToast("Erro ao salvar"));
+}
+
+function mostrarToast(msg){
+  // toast simples no topo
+  let t=document.getElementById("sg-toast");
+  if(!t){t=document.createElement("div");t.id="sg-toast";t.style.cssText="position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#1a1a18;color:#fff;padding:8px 18px;border-radius:20px;font-size:12px;z-index:999;transition:opacity .3s";document.body.appendChild(t);}
+  t.textContent=msg;t.style.opacity="1";
+  setTimeout(()=>t.style.opacity="0",2500);
+}
+
 function salvarDadosCiclo(){
   dadosCicloP1={germinacao:document.getElementById("p1-germ").value,vaso1:document.getElementById("p1-vaso1").value,altura:document.getElementById("p1-altura").value,smartgrow:document.getElementById("p1-smartgrow").value};
   dadosCicloP2={germinacao:document.getElementById("p2-germ").value,vaso1:document.getElementById("p2-vaso1").value,altura:document.getElementById("p2-altura").value,smartgrow:document.getElementById("p2-smartgrow").value};
@@ -960,23 +1056,44 @@ function carregarDados(){
     // 14:FatorRega 15:DiagIA 16:Motivo 17:AlertaLP
     const sv=(c,i,df="")=>{if(!c[i]||c[i].v==null)return df;return String(c[i].v);};
     const nv=(c,i,df=0)=>{if(!c[i]||c[i].v==null)return df;return parseFloat(c[i].v)||df;};
-    // Hora: pode vir como "HH:MM:SS" string ou como fração decimal do dia
-    const parseHora=(c,i)=>{
-      if(!c[i]||c[i].v==null) return "";
-      const v=c[i].v;
-      if(typeof v==="string"&&v.includes(":")) return v.substring(0,5);
-      if(typeof v==="number"){
-        const totalMin=Math.round(v*24*60);
-        const hh=Math.floor(totalMin/60)%24, mm=totalMin%60;
-        return String(hh).padStart(2,"0")+":"+String(mm).padStart(2,"0");
+    // Hora: pode vir como "HH:MM:SS" string, fração decimal ou Date(...)
+    const parseHora=(c,i,cTs)=>{
+      // Tenta coluna Hora primeiro
+      if(c[i]&&c[i].v!=null){
+        const v=c[i].v;
+        if(typeof v==="string"&&v.includes(":")) return v.substring(0,5);
+        if(typeof v==="number"&&v>0&&v<1){
+          const totalMin=Math.round(v*24*60);
+          const hh=Math.floor(totalMin/60)%24, mm=totalMin%60;
+          return String(hh).padStart(2,"0")+":"+String(mm).padStart(2,"0");
+        }
       }
-      return String(v).substring(0,5);
+      // Fallback: extrai do timestamp formatado (c[0].f geralmente tem "dd/MM/yyyy HH:mm:ss")
+      if(cTs&&cTs.f){
+        const m=String(cTs.f).match(/(\d{2}:\d{2})/);
+        if(m) return m[1];
+      }
+      return "--";
     };
     const dados=rows.map(r=>{
       const c=r.c;
       return{
-        ts:       String(c[0]?(c[0].f||c[0].v||""):"").substring(0,16),
-        hora:     parseHora(c,1),
+        ts: (()=>{
+          const raw=c[0]?c[0].v:"";
+          const fmt=c[0]?c[0].f:"";
+          // fmt do Sheets vem como "24/04/2026 20:11:57" ou similar — usa direto
+          if(fmt&&!fmt.includes("Date(")) return String(fmt).substring(0,16);
+          // v pode ser "Date(2026,3,24,20,11,57)" — parseia
+          const s=String(raw);
+          if(s.startsWith("Date(")){
+            const p=s.replace("Date(","").replace(")","").split(",").map(Number);
+            // p = [ano, mes(0-based), dia, h, m, s]
+            const d=new Date(p[0],p[1],p[2],p[3]||0,p[4]||0,p[5]||0);
+            return String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");
+          }
+          return String(raw).substring(0,16);
+        })(),
+        hora:     parseHora(c,1,c[0]),
         u1:       nv(c,2), u2:nv(c,3), media:nv(c,4), dif:nv(c,5),
         desequil: sv(c,6,"NAO"),
         boia:     nv(c,7),
