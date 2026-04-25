@@ -380,8 +380,11 @@ function atualizarReservatorio(galaoMlSheets, vbase, vtotal) {
   if(galaoMlSheets>0) galaoAtual=galaoMlSheets;
   const pct   = Math.max(0,Math.min(100,(galaoAtual/GALAO_ML)*100));
   const litros= (galaoAtual/1000).toFixed(1);
-  const consumoDia = vtotal>0 ? vtotal*2 : 300;
-  const dias  = Math.floor(galaoAtual/consumoDia);
+  // vtotal = volume real bombeado por rega (sistema completo, os dois vasos)
+  // Frequência estimada: 1 rega/dia na floração, 1 rega a cada 2 dias na vegetação
+  // Usamos vtotal direto como consumo por rega e assumimos ~1 rega/dia como base conservadora
+  const consumoPorRega = vtotal > 0 ? vtotal : 300;
+  const dias = Math.floor(galaoAtual / consumoPorRega); // dias se regar 1x/dia
   const C=2*Math.PI*33, offset=C*(1-pct/100);
   document.getElementById("res-litros").textContent=litros+"L";
   document.getElementById("res-dias").textContent=dias+" dias";
