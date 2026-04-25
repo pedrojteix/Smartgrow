@@ -208,14 +208,17 @@
         </div>
         <p class="planta-info" id="info-p1">Fase atual: <strong>Vegetação</strong></p>
         <div class="ciclo-info" id="ciclo-p1"></div>
-        <div class="ciclo-form" id="form-p1" style="margin-top:10px;border-top:1px solid var(--border);padding-top:10px">
-          <p class="lbl" style="margin-bottom:6px">Dados do ciclo</p>
-          <div class="form-row"><label class="form-label">Germinação</label><input class="form-input" type="date" id="p1-germ" onchange="salvarCampo(1)"></div>
-          <div class="form-row"><label class="form-label">Primeiro vaso</label><input class="form-input" type="date" id="p1-vaso1" onchange="salvarCampo(1)"></div>
-          <div class="form-row"><label class="form-label">Altura entrada (cm)</label><input class="form-input" type="number" id="p1-altura" placeholder="ex: 18" min="0" max="200" onchange="salvarCampo(1)"></div>
-          <div class="form-row"><label class="form-label">Entrada SmartGrow</label><input class="form-input" type="date" id="p1-smartgrow" onchange="salvarCampo(1)"></div>
+        <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">
+          <button class="btn-colheita" style="color:var(--blue);border-color:var(--blue)" onclick="toggleForm(1)">Inserir dados →</button>
+          <button class="btn-colheita" onclick="colherPlanta(1)">Registrar colheita →</button>
         </div>
-        <button class="btn-colheita" style="margin-top:10px" onclick="colherPlanta(1)">Registrar colheita →</button>
+        <div id="form-p1" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
+          <div class="form-row"><label class="form-label">Germinação</label><input class="form-input" type="date" id="p1-germ"></div>
+          <div class="form-row"><label class="form-label">Primeiro vaso (potinho)</label><input class="form-input" type="date" id="p1-vaso1"></div>
+          <div class="form-row"><label class="form-label">Altura ao entrar no SmartGrow (cm)</label><input class="form-input" type="number" id="p1-altura" placeholder="ex: 18" min="0" max="200"></div>
+          <div class="form-row"><label class="form-label">Entrada no SmartGrow (vaso 11L)</label><input class="form-input" type="date" id="p1-smartgrow"></div>
+          <button class="btn-primary" style="margin-top:8px;width:100%" onclick="salvarDadosPlanta(1)">Salvar</button>
+        </div>
       </div>
       <div class="card">
         <p class="planta-nome">Planta 2 — Vaso 2</p>
@@ -227,14 +230,17 @@
         </div>
         <p class="planta-info" id="info-p2">Fase atual: <strong>Vegetação</strong></p>
         <div class="ciclo-info" id="ciclo-p2"></div>
-        <div class="ciclo-form" id="form-p2" style="margin-top:10px;border-top:1px solid var(--border);padding-top:10px">
-          <p class="lbl" style="margin-bottom:6px">Dados do ciclo</p>
-          <div class="form-row"><label class="form-label">Germinação</label><input class="form-input" type="date" id="p2-germ" onchange="salvarCampo(2)"></div>
-          <div class="form-row"><label class="form-label">Primeiro vaso</label><input class="form-input" type="date" id="p2-vaso1" onchange="salvarCampo(2)"></div>
-          <div class="form-row"><label class="form-label">Altura entrada (cm)</label><input class="form-input" type="number" id="p2-altura" placeholder="ex: 16" min="0" max="200" onchange="salvarCampo(2)"></div>
-          <div class="form-row"><label class="form-label">Entrada SmartGrow</label><input class="form-input" type="date" id="p2-smartgrow" onchange="salvarCampo(2)"></div>
+        <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">
+          <button class="btn-colheita" style="color:var(--blue);border-color:var(--blue)" onclick="toggleForm(2)">Inserir dados →</button>
+          <button class="btn-colheita" onclick="colherPlanta(2)">Registrar colheita →</button>
         </div>
-        <button class="btn-colheita" style="margin-top:10px" onclick="colherPlanta(2)">Registrar colheita →</button>
+        <div id="form-p2" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
+          <div class="form-row"><label class="form-label">Germinação</label><input class="form-input" type="date" id="p2-germ"></div>
+          <div class="form-row"><label class="form-label">Primeiro vaso (potinho)</label><input class="form-input" type="date" id="p2-vaso1"></div>
+          <div class="form-row"><label class="form-label">Altura ao entrar no SmartGrow (cm)</label><input class="form-input" type="number" id="p2-altura" placeholder="ex: 16" min="0" max="200"></div>
+          <div class="form-row"><label class="form-label">Entrada no SmartGrow (vaso 11L)</label><input class="form-input" type="date" id="p2-smartgrow"></div>
+          <button class="btn-primary" style="margin-top:8px;width:100%" onclick="salvarDadosPlanta(2)">Salvar</button>
+        </div>
       </div>
     </div>
   </div>
