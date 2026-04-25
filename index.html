@@ -375,6 +375,9 @@ let janelaAtual = 8;
 let todosOsDados = [];
 let dadosCicloP1 = null;
 let dadosCicloP2 = null;
+// Tenta recuperar dados do ciclo do localStorage
+try{const p1=localStorage.getItem("sg_ciclo_p1");if(p1)dadosCicloP1=JSON.parse(p1);}catch(e){}
+try{const p2=localStorage.getItem("sg_ciclo_p2");if(p2)dadosCicloP2=JSON.parse(p2);}catch(e){}
 let cicloModalAberto = false;
 
 const FASES_LUZ = {
@@ -818,31 +821,27 @@ function montarHTMLRelatorio(numPlanta, ciclo, r, svgUmidade, svgAgua, diags) {
 </html>`;
 }
 
-// ── STORAGE PERSISTENTE ────────────────────────────
-async function salvarCicloNoHistorico(resumo) {
+// ── STORAGE PERSISTENTE (localStorage) ─────────────
+function salvarCicloNoHistorico(resumo) {
   try {
-    // Busca histórico existente
     let historico = [];
-    try {
-      const existing = await window.storage.get("historico_ciclos");
-      if (existing) historico = JSON.parse(existing.value);
-    } catch(e) {}
-
+    const existing = localStorage.getItem("sg_historico_ciclos");
+    if (existing) historico = JSON.parse(existing);
     historico.push(resumo);
-    await window.storage.set("historico_ciclos", JSON.stringify(historico));
+    localStorage.setItem("sg_historico_ciclos", JSON.stringify(historico));
     console.log("[STORAGE] Ciclo salvo no histórico");
   } catch(e) {
     console.warn("[STORAGE] Falha ao salvar:", e);
   }
 }
 
-async function carregarHistorico() {
+function carregarHistorico() {
   try {
-    const result = await window.storage.get("historico_ciclos");
-    if (!result) return [];
-    return JSON.parse(result.value);
+    const existing = localStorage.getItem("sg_historico_ciclos");
+    if (!existing) return Promise.resolve([]);
+    return Promise.resolve(JSON.parse(existing));
   } catch(e) {
-    return [];
+    return Promise.resolve([]);
   }
 }
 
@@ -882,30 +881,24 @@ function renderChart(dados){
 function setJanela(btn,n){janelaAtual=n;document.querySelectorAll(".jbtn").forEach(b=>b.classList.remove("ativo"));btn.classList.add("ativo");if(todosOsDados.length)renderChart(todosOsDados);}
 
 // ── MODAL CICLO ───────────────────────────────────
-async function abrirModal(cicloId){
+function abrirModal(cicloId){
   if(cicloModalAberto) return;
-  // Verifica se já respondemos esse ciclo_id no storage
+  // Verifica se já respondemos esse ciclo_id no localStorage
   if(cicloId){
-    try{
-      const resp = await window.storage.get("ciclo_respondido");
-      if(resp && resp.value === String(cicloId)) return; // já respondido
-    }catch(e){}
+    const jaRespondido = localStorage.getItem("sg_ciclo_respondido");
+    if(jaRespondido === String(cicloId)) return;
   }
   cicloModalAberto=true;
   const hoje=new Date().toISOString().split("T")[0];
   document.getElementById("p1-smartgrow").value=hoje;
   document.getElementById("p2-smartgrow").value=hoje;
-  // Guarda o ciclo_id atual para uso no salvar
   document.getElementById("modal-ciclo").dataset.cicloId = cicloId||"";
   document.getElementById("modal-ciclo").classList.remove("hidden");
 }
-async function fecharModal(){
+function fecharModal(){
   document.getElementById("modal-ciclo").classList.add("hidden");
-  // Marca esse ciclo como respondido (mesmo se pulou)
   const cicloId = document.getElementById("modal-ciclo").dataset.cicloId;
-  if(cicloId){
-    try{ await window.storage.set("ciclo_respondido", String(cicloId)); }catch(e){}
-  }
+  if(cicloId) localStorage.setItem("sg_ciclo_respondido", String(cicloId));
 }
 function salvarDadosCiclo(){
   dadosCicloP1={germinacao:document.getElementById("p1-germ").value,vaso1:document.getElementById("p1-vaso1").value,altura:document.getElementById("p1-altura").value,smartgrow:document.getElementById("p1-smartgrow").value};
@@ -922,8 +915,8 @@ function carregarEventos(){
     const rows=(json.table.rows||[]).filter(r=>r.c&&r.c[0]&&r.c[0].v);
     for(const r of rows){
       const c=r.c, tipo=String(c[2]&&c[2].v!=null?c[2].v:""), desc=String(c[3]&&c[3].v!=null?c[3].v:"");
-      if(tipo==="dados_ciclo_P1"&&!dadosCicloP1){try{dadosCicloP1=JSON.parse(desc);}catch(e){}}
-      if(tipo==="dados_ciclo_P2"&&!dadosCicloP2){try{dadosCicloP2=JSON.parse(desc);}catch(e){}}
+      if(tipo==="dados_ciclo_P1"&&!dadosCicloP1){try{dadosCicloP1=JSON.parse(desc);localStorage.setItem("sg_ciclo_p1",desc);}catch(e){}}
+      if(tipo==="dados_ciclo_P2"&&!dadosCicloP2){try{dadosCicloP2=JSON.parse(desc);localStorage.setItem("sg_ciclo_p2",desc);}catch(e){}}
       if(tipo==="start_ciclo"&&!cicloModalAberto){
         // Usa o ciclo_id (timestamp UNIX em segundos) para verificar se é recente
         // Formato da descrição: "ciclo_id:1777073529"
