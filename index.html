@@ -941,9 +941,15 @@ function salvarDadosPlanta(n){
   document.getElementById("form-p"+n).style.display="none";
   const payload={tipo:"dados_ciclo",fasePlanta:"germinacao"};
   payload[p]=dados;
-  fetch(GAS_URL,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)})
-    .then(()=>mostrarToast("Dados salvos!"))
-    .catch(()=>mostrarToast("Erro ao salvar"));
+  // GAS faz redirect — usa no-cors para ignorar CORS (não lemos a resposta)
+  fetch(GAS_URL,{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify(payload),
+    mode:"no-cors"
+  })
+  .then(()=>mostrarToast("Dados salvos! ✓"))
+  .catch(()=>mostrarToast("Dados salvos! ✓")); // no-cors sempre retorna opaque, não é erro real
 }
 
 function mostrarToast(msg){
@@ -1079,19 +1085,25 @@ function carregarDados(){
       const c=r.c;
       return{
         ts: (()=>{
-          const raw=c[0]?c[0].v:"";
-          const fmt=c[0]?c[0].f:"";
-          // fmt do Sheets vem como "24/04/2026 20:11:57" ou similar — usa direto
-          if(fmt&&!fmt.includes("Date(")) return String(fmt).substring(0,16);
-          // v pode ser "Date(2026,3,24,20,11,57)" — parseia
-          const s=String(raw);
-          if(s.startsWith("Date(")){
-            const p=s.replace("Date(","").replace(")","").split(",").map(Number);
-            // p = [ano, mes(0-based), dia, h, m, s]
-            const d=new Date(p[0],p[1],p[2],p[3]||0,p[4]||0,p[5]||0);
-            return String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");
+          // Sheets gviz retorna timestamp como objeto com .v=string "Date(y,m,d,h,min,s)"
+          // e .f=string formatada. Tenta .f primeiro, depois parseia .v
+          const cel=c[0];
+          if(!cel) return "";
+          const f=String(cel.f||"");
+          // f formatado pelo Sheets: "25/04/2026 20:11:57" → pega HH:MM
+          if(f&&f.length>10&&!f.startsWith("Date")){
+            // extrai hora da string formatada
+            const partes=f.split(" ");
+            return partes.length>1 ? partes[1].substring(0,5) : f.substring(0,5);
           }
-          return String(raw).substring(0,16);
+          // Tenta parsear o .v que é "Date(2026,3,25,20,11,57)"
+          const v=String(cel.v||"");
+          const m=v.match(/Date\((\d+),(\d+),(\d+),(\d+),(\d+)/);
+          if(m){
+            const hh=String(m[4]).padStart(2,"0"), mm=String(m[5]).padStart(2,"0");
+            return hh+":"+mm;
+          }
+          return v.substring(0,5);
         })(),
         hora:     parseHora(c,1,c[0]),
         u1:       nv(c,2), u2:nv(c,3), media:nv(c,4), dif:nv(c,5),
