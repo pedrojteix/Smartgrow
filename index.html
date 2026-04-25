@@ -242,6 +242,7 @@
         <p class="planta-info" id="info-p1">Fase atual: <strong>Vegetação</strong></p>
         <div class="ciclo-info" id="ciclo-p1"></div>
         <button class="btn-colheita" onclick="colherPlanta(1)">Registrar colheita →</button>
+        <button class="btn-colheita" style="color:var(--blue);border-color:var(--blue);margin-left:6px" onclick="editarDadosCiclo(1)">Editar dados →</button>
       </div>
       <div class="card">
         <p class="planta-nome">Planta 2 — Vaso 2</p>
@@ -254,6 +255,7 @@
         <p class="planta-info" id="info-p2">Fase atual: <strong>Vegetação</strong></p>
         <div class="ciclo-info" id="ciclo-p2"></div>
         <button class="btn-colheita" onclick="colherPlanta(2)">Registrar colheita →</button>
+        <button class="btn-colheita" style="color:var(--blue);border-color:var(--blue);margin-left:6px" onclick="editarDadosCiclo(2)">Editar dados →</button>
       </div>
     </div>
   </div>
@@ -844,6 +846,20 @@ async function carregarHistorico() {
   }
 }
 
+function editarDadosCiclo(numPlanta){
+  // Preenche o modal com os dados existentes e reabre
+  const dados = numPlanta===1 ? dadosCicloP1 : dadosCicloP2;
+  const p = numPlanta===1 ? "p1" : "p2";
+  if(dados){
+    document.getElementById(`${p}-germ`).value      = dados.germinacao||"";
+    document.getElementById(`${p}-vaso1`).value     = dados.vaso1||"";
+    document.getElementById(`${p}-altura`).value    = dados.altura||"";
+    document.getElementById(`${p}-smartgrow`).value = dados.smartgrow||"";
+  }
+  cicloModalAberto = false; // permite reabrir
+  document.getElementById("modal-ciclo").classList.remove("hidden");
+}
+
 // ── GRÁFICO ───────────────────────────────────────
 function renderChart(dados){
   const slice=dados.slice(0,janelaAtual).reverse();
@@ -866,15 +882,31 @@ function renderChart(dados){
 function setJanela(btn,n){janelaAtual=n;document.querySelectorAll(".jbtn").forEach(b=>b.classList.remove("ativo"));btn.classList.add("ativo");if(todosOsDados.length)renderChart(todosOsDados);}
 
 // ── MODAL CICLO ───────────────────────────────────
-function abrirModal(){
+async function abrirModal(cicloId){
   if(cicloModalAberto) return;
+  // Verifica se já respondemos esse ciclo_id no storage
+  if(cicloId){
+    try{
+      const resp = await window.storage.get("ciclo_respondido");
+      if(resp && resp.value === String(cicloId)) return; // já respondido
+    }catch(e){}
+  }
   cicloModalAberto=true;
   const hoje=new Date().toISOString().split("T")[0];
   document.getElementById("p1-smartgrow").value=hoje;
   document.getElementById("p2-smartgrow").value=hoje;
+  // Guarda o ciclo_id atual para uso no salvar
+  document.getElementById("modal-ciclo").dataset.cicloId = cicloId||"";
   document.getElementById("modal-ciclo").classList.remove("hidden");
 }
-function fecharModal(){document.getElementById("modal-ciclo").classList.add("hidden");}
+async function fecharModal(){
+  document.getElementById("modal-ciclo").classList.add("hidden");
+  // Marca esse ciclo como respondido (mesmo se pulou)
+  const cicloId = document.getElementById("modal-ciclo").dataset.cicloId;
+  if(cicloId){
+    try{ await window.storage.set("ciclo_respondido", String(cicloId)); }catch(e){}
+  }
+}
 function salvarDadosCiclo(){
   dadosCicloP1={germinacao:document.getElementById("p1-germ").value,vaso1:document.getElementById("p1-vaso1").value,altura:document.getElementById("p1-altura").value,smartgrow:document.getElementById("p1-smartgrow").value};
   dadosCicloP2={germinacao:document.getElementById("p2-germ").value,vaso1:document.getElementById("p2-vaso1").value,altura:document.getElementById("p2-altura").value,smartgrow:document.getElementById("p2-smartgrow").value};
@@ -902,7 +934,8 @@ function carregarEventos(){
           const agoraMs=Date.now();
           // Abre modal se o ciclo foi iniciado nas últimas 4 horas
           if(agoraMs-cicloTs < 4*3600*1000 && !dadosCicloP1){
-            setTimeout(abrirModal,800);
+            const cid = match[1];
+            setTimeout(()=>abrirModal(cid),800);
           }
         }
       }
