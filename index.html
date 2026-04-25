@@ -96,49 +96,16 @@
   .evento-tipo{font-size:11px;font-weight:500;color:var(--text)}
   .evento-desc{font-size:11px;color:var(--text-sec)}
   .err-box{background:#fff5f5;border:1px solid #ffcdd2;border-radius:var(--radius-sm);padding:12px 16px;font-size:13px;color:#c62828;margin-bottom:16px}
-  /* MODAL */
-  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:200;display:flex;align-items:center;justify-content:center;padding:16px}
-  .modal{background:var(--surface);border-radius:var(--radius);padding:24px;max-width:480px;width:100%;max-height:90vh;overflow-y:auto}
-  .modal-title{font-size:16px;font-weight:500;margin:0 0 6px}
-  .modal-sub{font-size:12px;color:var(--text-sec);margin:0 0 20px}
-  .modal-section{margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border)}
-  .modal-section:last-of-type{border-bottom:none;margin-bottom:0}
-  .modal-section-title{font-size:11px;font-weight:500;color:var(--green);margin:0 0 10px;text-transform:uppercase;letter-spacing:.05em}
-  .form-row{margin-bottom:10px}
-  .form-label{font-size:11px;color:var(--text-sec);display:block;margin-bottom:4px}
-  .form-input{width:100%;border:1px solid var(--border-strong);border-radius:var(--radius-sm);padding:8px 12px;font-size:13px;font-family:inherit;background:var(--bg);color:var(--text);outline:none}
+  .form-row{margin-bottom:8px}
+  .form-label{font-size:10px;color:var(--text-ter);display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:.05em}
+  .form-input{width:100%;border:1px solid var(--border-strong);border-radius:var(--radius-sm);padding:6px 10px;font-size:12px;font-family:inherit;background:var(--bg);color:var(--text);outline:none}
   .form-input:focus{border-color:var(--green);box-shadow:0 0 0 2px var(--green-light)}
-  .modal-actions{display:flex;gap:10px;margin-top:20px;justify-content:flex-end}
   .hidden{display:none}
 </style>
 </head>
 <body>
 
-<!-- MODAL INÍCIO DE CICLO -->
-<div class="modal-overlay hidden" id="modal-ciclo">
-  <div class="modal">
-    <p class="modal-title">🌱 Novo ciclo iniciado!</p>
-    <p class="modal-sub">Preencha os dados de cada planta para rastrear o histórico completo do ciclo.</p>
-    <div class="modal-section">
-      <p class="modal-section-title">Planta 1 — Vaso 1</p>
-      <div class="form-row"><label class="form-label">Data de germinação</label><input class="form-input" type="date" id="p1-germ"></div>
-      <div class="form-row"><label class="form-label">Data do primeiro vaso (potinho)</label><input class="form-input" type="date" id="p1-vaso1"></div>
-      <div class="form-row"><label class="form-label">Altura ao entrar no SmartGrow (cm)</label><input class="form-input" type="number" id="p1-altura" placeholder="ex: 18" min="0" max="200"></div>
-      <div class="form-row"><label class="form-label">Data de entrada no SmartGrow (vaso 11L)</label><input class="form-input" type="date" id="p1-smartgrow"></div>
-    </div>
-    <div class="modal-section">
-      <p class="modal-section-title">Planta 2 — Vaso 2</p>
-      <div class="form-row"><label class="form-label">Data de germinação</label><input class="form-input" type="date" id="p2-germ"></div>
-      <div class="form-row"><label class="form-label">Data do primeiro vaso (potinho)</label><input class="form-input" type="date" id="p2-vaso1"></div>
-      <div class="form-row"><label class="form-label">Altura ao entrar no SmartGrow (cm)</label><input class="form-input" type="number" id="p2-altura" placeholder="ex: 16" min="0" max="200"></div>
-      <div class="form-row"><label class="form-label">Data de entrada no SmartGrow (vaso 11L)</label><input class="form-input" type="date" id="p2-smartgrow"></div>
-    </div>
-    <div class="modal-actions">
-      <button class="btn" onclick="fecharModal()">Pular por agora</button>
-      <button class="btn-primary" onclick="salvarDadosCiclo()">Salvar dados</button>
-    </div>
-  </div>
-</div>
+<!-- modal removido -->
 
 <header class="header">
   <div class="h-logo">
@@ -241,8 +208,14 @@
         </div>
         <p class="planta-info" id="info-p1">Fase atual: <strong>Vegetação</strong></p>
         <div class="ciclo-info" id="ciclo-p1"></div>
-        <button class="btn-colheita" onclick="colherPlanta(1)">Registrar colheita →</button>
-        <button class="btn-colheita" style="color:var(--blue);border-color:var(--blue);margin-left:6px" onclick="editarDadosCiclo(1)">Editar dados →</button>
+        <div class="ciclo-form" id="form-p1" style="margin-top:10px;border-top:1px solid var(--border);padding-top:10px">
+          <p class="lbl" style="margin-bottom:6px">Dados do ciclo</p>
+          <div class="form-row"><label class="form-label">Germinação</label><input class="form-input" type="date" id="p1-germ" onchange="salvarCampo(1)"></div>
+          <div class="form-row"><label class="form-label">Primeiro vaso</label><input class="form-input" type="date" id="p1-vaso1" onchange="salvarCampo(1)"></div>
+          <div class="form-row"><label class="form-label">Altura entrada (cm)</label><input class="form-input" type="number" id="p1-altura" placeholder="ex: 18" min="0" max="200" onchange="salvarCampo(1)"></div>
+          <div class="form-row"><label class="form-label">Entrada SmartGrow</label><input class="form-input" type="date" id="p1-smartgrow" onchange="salvarCampo(1)"></div>
+        </div>
+        <button class="btn-colheita" style="margin-top:10px" onclick="colherPlanta(1)">Registrar colheita →</button>
       </div>
       <div class="card">
         <p class="planta-nome">Planta 2 — Vaso 2</p>
@@ -254,8 +227,14 @@
         </div>
         <p class="planta-info" id="info-p2">Fase atual: <strong>Vegetação</strong></p>
         <div class="ciclo-info" id="ciclo-p2"></div>
-        <button class="btn-colheita" onclick="colherPlanta(2)">Registrar colheita →</button>
-        <button class="btn-colheita" style="color:var(--blue);border-color:var(--blue);margin-left:6px" onclick="editarDadosCiclo(2)">Editar dados →</button>
+        <div class="ciclo-form" id="form-p2" style="margin-top:10px;border-top:1px solid var(--border);padding-top:10px">
+          <p class="lbl" style="margin-bottom:6px">Dados do ciclo</p>
+          <div class="form-row"><label class="form-label">Germinação</label><input class="form-input" type="date" id="p2-germ" onchange="salvarCampo(2)"></div>
+          <div class="form-row"><label class="form-label">Primeiro vaso</label><input class="form-input" type="date" id="p2-vaso1" onchange="salvarCampo(2)"></div>
+          <div class="form-row"><label class="form-label">Altura entrada (cm)</label><input class="form-input" type="number" id="p2-altura" placeholder="ex: 16" min="0" max="200" onchange="salvarCampo(2)"></div>
+          <div class="form-row"><label class="form-label">Entrada SmartGrow</label><input class="form-input" type="date" id="p2-smartgrow" onchange="salvarCampo(2)"></div>
+        </div>
+        <button class="btn-colheita" style="margin-top:10px" onclick="colherPlanta(2)">Registrar colheita →</button>
       </div>
     </div>
   </div>
@@ -378,7 +357,7 @@ let dadosCicloP2 = null;
 // Tenta recuperar dados do ciclo do localStorage
 try{const p1=localStorage.getItem("sg_ciclo_p1");if(p1)dadosCicloP1=JSON.parse(p1);}catch(e){}
 try{const p2=localStorage.getItem("sg_ciclo_p2");if(p2)dadosCicloP2=JSON.parse(p2);}catch(e){}
-let cicloModalAberto = false;
+
 
 const FASES_LUZ = {
   germinacao:{h:17,liga:7,desliga:0},
@@ -845,19 +824,7 @@ function carregarHistorico() {
   }
 }
 
-function editarDadosCiclo(numPlanta){
-  // Preenche o modal com os dados existentes e reabre
-  const dados = numPlanta===1 ? dadosCicloP1 : dadosCicloP2;
-  const p = numPlanta===1 ? "p1" : "p2";
-  if(dados){
-    document.getElementById(`${p}-germ`).value      = dados.germinacao||"";
-    document.getElementById(`${p}-vaso1`).value     = dados.vaso1||"";
-    document.getElementById(`${p}-altura`).value    = dados.altura||"";
-    document.getElementById(`${p}-smartgrow`).value = dados.smartgrow||"";
-  }
-  cicloModalAberto = false; // permite reabrir
-  document.getElementById("modal-ciclo").classList.remove("hidden");
-}
+
 
 // ── GRÁFICO ───────────────────────────────────────
 function renderChart(dados){
@@ -904,6 +871,7 @@ function salvarDadosCiclo(){
   dadosCicloP1={germinacao:document.getElementById("p1-germ").value,vaso1:document.getElementById("p1-vaso1").value,altura:document.getElementById("p1-altura").value,smartgrow:document.getElementById("p1-smartgrow").value};
   dadosCicloP2={germinacao:document.getElementById("p2-germ").value,vaso1:document.getElementById("p2-vaso1").value,altura:document.getElementById("p2-altura").value,smartgrow:document.getElementById("p2-smartgrow").value};
   atualizarPlanta(0,0); atualizarPlanta(1,0);
+  preencherFormularios();
   fetch(GAS_URL,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({tipo:"dados_ciclo",fasePlanta:"germinacao",p1:dadosCicloP1,p2:dadosCicloP2})}).catch(()=>{});
   fecharModal();
 }
