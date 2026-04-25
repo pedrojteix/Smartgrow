@@ -305,29 +305,14 @@
   </div>
 
   <div class="sec">
-    <p class="lbl">Google Drive</p>
-    <div class="drive-grid">
-      <div class="card">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-          <p class="drive-title">Fotos</p><span style="font-size:11px;color:var(--text-ter)">Conectar Drive</span>
-        </div>
-        <div class="file-row">
-          <div class="foto-thumb"><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="8" r="3" fill="#4a7c59" opacity=".4"/><path d="M4 16c0-3.3 2.7-6 6-6s6 2.7 6 6" stroke="#4a7c59" stroke-width="1.2" opacity=".4"/></svg></div>
-          <div style="flex:1;min-width:0"><p class="file-name" style="color:var(--text-ter)">Conecte o Drive para ver fotos</p><p class="file-meta">—</p></div>
-        </div>
+    <p class="lbl">Análises Visuais</p>
+    <div class="card" id="analises-visuais">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <p class="drive-title">Relatórios por foto</p>
+        <span style="font-size:11px;color:var(--text-ter)" id="analises-count">Carregando...</span>
       </div>
-      <div class="card">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-          <p class="drive-title">Base de conhecimento</p><span style="font-size:11px;color:var(--text-ter)">2 arquivos</span>
-        </div>
-        <div class="file-row">
-          <div class="pdf-thumb"><div class="pdf-top"><svg width="18" height="22" viewBox="0 0 18 22" fill="none"><rect x="1" y="1" width="16" height="20" rx="1.5" fill="#fff" stroke="#ddd" stroke-width=".5"/><line x1="3.5" y1="5" x2="14.5" y2="5" stroke="#ccc" stroke-width=".8"/><line x1="3.5" y1="7.5" x2="14.5" y2="7.5" stroke="#ccc" stroke-width=".8"/></svg></div><div class="pdf-lines"><div class="pdf-line"></div><div class="pdf-line"></div><div class="pdf-line"></div></div><span class="pdf-badge">PDF</span></div>
-          <div style="flex:1;min-width:0"><p class="file-name">API Passower</p><p class="file-meta">Base de conhecimento</p></div>
-        </div>
-        <div class="file-row" style="border:none;padding-bottom:0">
-          <div class="pdf-thumb"><div class="pdf-top"><svg width="18" height="22" viewBox="0 0 18 22" fill="none"><rect x="1" y="1" width="16" height="20" rx="1.5" fill="#fff" stroke="#ddd" stroke-width=".5"/><line x1="3.5" y1="5" x2="14.5" y2="5" stroke="#ccc" stroke-width=".8"/><line x1="3.5" y1="7.5" x2="14.5" y2="7.5" stroke="#ccc" stroke-width=".8"/></svg></div><div class="pdf-lines"><div class="pdf-line"></div><div class="pdf-line"></div><div class="pdf-line"></div></div><span class="pdf-badge">PDF</span></div>
-          <div style="flex:1;min-width:0"><p class="file-name">API R00</p><p class="file-meta">Base de conhecimento</p></div>
-        </div>
+      <div id="analises-lista">
+        <p style="font-size:13px;color:var(--text-ter)">Nenhuma análise ainda. Use o app SmartGrow Vision para analisar suas plantas.</p>
       </div>
     </div>
   </div>
@@ -878,6 +863,41 @@ function salvarDadosCiclo(){
   dadosCicloP2={germinacao:document.getElementById("p2-germ").value,vaso1:document.getElementById("p2-vaso1").value,altura:document.getElementById("p2-altura").value,smartgrow:document.getElementById("p2-smartgrow").value};
   atualizarPlanta(0,0); atualizarPlanta(1,0);
   preencherFormularios();
+  // Carrega análises visuais
+  const analises = rows.filter(r=>{
+    const c=r.c, tipo=String(c[2]&&c[2].v!=null?c[2].v:"");
+    return tipo.startsWith("analise_visual_");
+  }).slice(0,6);
+  const listaEl = document.getElementById("analises-lista");
+  const countEl = document.getElementById("analises-count");
+  if(analises.length){
+    countEl.textContent = analises.length + " análise" + (analises.length>1?"s":"");
+    listaEl.innerHTML = analises.map(r=>{
+      const c=r.c;
+      const hora=String(c[1]&&c[1].v!=null?c[1].v:"").substring(0,5);
+      const tipo=String(c[2]&&c[2].v!=null?c[2].v:"");
+      const num=tipo.includes("P2")?"2":"1";
+      let dados={};
+      try{ dados=JSON.parse(String(c[3]&&c[3].v!=null?c[3].v:"{}")); }catch(e){}
+      const estado=dados.estado||"--";
+      const cores={ótimo:"#4a7c59",bom:"#639922",atenção:"#BA7517",crítico:"#E24B4A"};
+      const cor=cores[estado]||"#888";
+      return `<div class="file-row">
+        <div class="foto-thumb" style="background:var(--green-light);flex-direction:column;gap:2px">
+          <span style="font-size:16px">🌿</span>
+          <span style="font-size:9px;color:var(--green);font-weight:500">P${num}</span>
+        </div>
+        <div style="flex:1;min-width:0">
+          <p class="file-name">${dados.ts||hora} — Planta ${num}</p>
+          <p class="file-meta" style="color:${cor}">${estado.charAt(0).toUpperCase()+estado.slice(1)} · ${dados.fase||"--"} · ${dados.altura?dados.altura+"cm":"--"}</p>
+          <p class="file-meta" style="margin-top:2px">${dados.resumo?dados.resumo.substring(0,80)+"...":""}</p>
+        </div>
+      </div>`;
+    }).join("");
+  } else {
+    countEl.textContent = "0 análises";
+    listaEl.innerHTML = '<p style="font-size:13px;color:var(--text-ter)">Nenhuma análise ainda. Use o app SmartGrow Vision.</p>';
+  }
   fetch(GAS_URL,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({tipo:"dados_ciclo",fasePlanta:"germinacao",p1:dadosCicloP1,p2:dadosCicloP2})}).catch(()=>{});
   fecharModal();
 }
@@ -940,11 +960,23 @@ function carregarDados(){
     // 14:FatorRega 15:DiagIA 16:Motivo 17:AlertaLP
     const sv=(c,i,df="")=>{if(!c[i]||c[i].v==null)return df;return String(c[i].v);};
     const nv=(c,i,df=0)=>{if(!c[i]||c[i].v==null)return df;return parseFloat(c[i].v)||df;};
+    // Hora: pode vir como "HH:MM:SS" string ou como fração decimal do dia
+    const parseHora=(c,i)=>{
+      if(!c[i]||c[i].v==null) return "";
+      const v=c[i].v;
+      if(typeof v==="string"&&v.includes(":")) return v.substring(0,5);
+      if(typeof v==="number"){
+        const totalMin=Math.round(v*24*60);
+        const hh=Math.floor(totalMin/60)%24, mm=totalMin%60;
+        return String(hh).padStart(2,"0")+":"+String(mm).padStart(2,"0");
+      }
+      return String(v).substring(0,5);
+    };
     const dados=rows.map(r=>{
       const c=r.c;
       return{
         ts:       String(c[0]?(c[0].f||c[0].v||""):"").substring(0,16),
-        hora:     sv(c,1),
+        hora:     parseHora(c,1),
         u1:       nv(c,2), u2:nv(c,3), media:nv(c,4), dif:nv(c,5),
         desequil: sv(c,6,"NAO"),
         boia:     nv(c,7),
