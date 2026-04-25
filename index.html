@@ -877,6 +877,7 @@ function preencherFormulario(n){
 }
 
 function preencherFormularios(){
+  // Sheets pode sobrescrever dados do localStorage — só aplica se não temos dados locais
   if(dadosCicloP1) preencherFormulario(1);
   if(dadosCicloP2) preencherFormulario(2);
 }
@@ -924,6 +925,7 @@ function preencherFormulario(n){
 }
 
 function preencherFormularios(){
+  // Sheets pode sobrescrever dados do localStorage — só aplica se não temos dados locais
   if(dadosCicloP1) preencherFormulario(1);
   if(dadosCicloP2) preencherFormulario(2);
 }
@@ -941,15 +943,13 @@ function salvarDadosPlanta(n){
   document.getElementById("form-p"+n).style.display="none";
   const payload={tipo:"dados_ciclo",fasePlanta:"germinacao"};
   payload[p]=dados;
-  // GAS faz redirect — usa no-cors para ignorar CORS (não lemos a resposta)
-  fetch(GAS_URL,{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify(payload),
-    mode:"no-cors"
-  })
-  .then(()=>mostrarToast("Dados salvos! ✓"))
-  .catch(()=>mostrarToast("Dados salvos! ✓")); // no-cors sempre retorna opaque, não é erro real
+  // Salva no localStorage imediatamente (persiste entre reloads)
+  localStorage.setItem("sg_ciclo_p"+n, JSON.stringify(dados));
+  mostrarToast("Dados salvos! ✓");
+
+  // Tenta enviar ao GAS em background (não bloqueia)
+  fetch(GAS_URL,{method:"POST",headers:{"Content-Type":"text/plain"},body:JSON.stringify(payload)})
+    .catch(()=>{}); // ignora erros de CORS silenciosamente
 }
 
 function mostrarToast(msg){
@@ -1063,49 +1063,34 @@ function carregarDados(){
     const sv=(c,i,df="")=>{if(!c[i]||c[i].v==null)return df;return String(c[i].v);};
     const nv=(c,i,df=0)=>{if(!c[i]||c[i].v==null)return df;return parseFloat(c[i].v)||df;};
     // Hora: pode vir como "HH:MM:SS" string, fração decimal ou Date(...)
-    const parseHora=(c,i,cTs)=>{
-      // Tenta coluna Hora primeiro
-      if(c[i]&&c[i].v!=null){
-        const v=c[i].v;
-        if(typeof v==="string"&&v.includes(":")) return v.substring(0,5);
-        if(typeof v==="number"&&v>0&&v<1){
-          const totalMin=Math.round(v*24*60);
-          const hh=Math.floor(totalMin/60)%24, mm=totalMin%60;
-          return String(hh).padStart(2,"0")+":"+String(mm).padStart(2,"0");
-        }
-      }
-      // Fallback: extrai do timestamp formatado (c[0].f geralmente tem "dd/MM/yyyy HH:mm:ss")
-      if(cTs&&cTs.f){
-        const m=String(cTs.f).match(/(\d{2}:\d{2})/);
-        if(m) return m[1];
-      }
+    // c[1].f já vem como "HH:MM:SS" do Sheets — usa direto
+    const parseHora=(c,i)=>{
+      if(!c[i]) return "--";
+      const f=String(c[i].f||"");
+      if(f&&f.includes(":")) return f.substring(0,5);
+      // Fallback: parseia Date(1899,11,30,h,m,s) do .v
+      const v=String(c[i].v||"");
+      const m=v.match(/Date\(\d+,\d+,\d+,(\d+),(\d+)/);
+      if(m) return String(m[1]).padStart(2,"0")+":"+String(m[2]).padStart(2,"0");
       return "--";
     };
     const dados=rows.map(r=>{
       const c=r.c;
       return{
         ts: (()=>{
-          // Sheets gviz retorna timestamp como objeto com .v=string "Date(y,m,d,h,min,s)"
-          // e .f=string formatada. Tenta .f primeiro, depois parseia .v
-          const cel=c[0];
-          if(!cel) return "";
-          const f=String(cel.f||"");
-          // f formatado pelo Sheets: "25/04/2026 20:11:57" → pega HH:MM
-          if(f&&f.length>10&&!f.startsWith("Date")){
-            // extrai hora da string formatada
-            const partes=f.split(" ");
-            return partes.length>1 ? partes[1].substring(0,5) : f.substring(0,5);
-          }
-          // Tenta parsear o .v que é "Date(2026,3,25,20,11,57)"
-          const v=String(cel.v||"");
-          const m=v.match(/Date\((\d+),(\d+),(\d+),(\d+),(\d+)/);
-          if(m){
-            const hh=String(m[4]).padStart(2,"0"), mm=String(m[5]).padStart(2,"0");
-            return hh+":"+mm;
-          }
-          return v.substring(0,5);
+          // c[0].f = "4/25/2026" (data), c[1].f = "12:24:35" (hora)
+          // Usa a hora de c[1] para o label do gráfico
+          const hcel=c[1];
+          if(!hcel) return "--";
+          const hf=String(hcel.f||"");
+          if(hf&&hf.includes(":")) return hf.substring(0,5); // "12:24"
+          // Fallback: parseia Date(1899,11,30,h,m,s)
+          const hv=String(hcel.v||"");
+          const m=hv.match(/Date\(\d+,\d+,\d+,(\d+),(\d+)/);
+          if(m) return String(m[1]).padStart(2,"0")+":"+String(m[2]).padStart(2,"0");
+          return "--";
         })(),
-        hora:     parseHora(c,1,c[0]),
+        hora:     parseHora(c,1),
         u1:       nv(c,2), u2:nv(c,3), media:nv(c,4), dif:nv(c,5),
         desequil: sv(c,6,"NAO"),
         boia:     nv(c,7),
@@ -1168,6 +1153,16 @@ function carregarDados(){
     document.getElementById("sg-error").innerHTML=`<div class="err-box">Não foi possível carregar: ${err.message}</div>`;
   });
 }
+
+// Carrega dados de ciclo do localStorage imediatamente (sem esperar Sheets)
+(function(){
+  try{
+    const s1=localStorage.getItem("sg_ciclo_p1");
+    const s2=localStorage.getItem("sg_ciclo_p2");
+    if(s1){ dadosCicloP1=JSON.parse(s1); atualizarPlanta(0,0); preencherFormulario(1); }
+    if(s2){ dadosCicloP2=JSON.parse(s2); atualizarPlanta(1,0); preencherFormulario(2); }
+  }catch(e){}
+})();
 
 carregarDados();
 
