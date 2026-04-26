@@ -399,15 +399,17 @@ function atualizarReservatorio(galaoMlSheets, vbase, vtotal) {
   const litros = (galaoAtual / 1000).toFixed(1);
   // vtotal = volume real bombeado por rega (dois vasos juntos)
   // vbase  = por vaso. Se nunca regou, estima conservadoramente
-  const volPorRega = vtotal > 0 ? vtotal : (vbase > 0 ? vbase * 2 : 300);
-  const dias = volPorRega > 0 ? Math.floor(galaoAtual / volPorRega) : 0;
+  // vtotal = volume real bombeado na última rega (ambos os vasos)
+  // Se vtotal=0 nunca regou — não usar estimativa, mostrar "--"
+  const semDado  = vtotal === 0;
+  const dias     = semDado ? null : Math.floor(galaoAtual / vtotal);
 
   const C = 2 * Math.PI * 33;
   const offset = C * (1 - pct / 100);
   const cor = pct <= 20 ? "#E24B4A" : pct <= 40 ? "#BA7517" : "#639922";
 
   document.getElementById("res-litros").textContent = litros + "L";
-  document.getElementById("res-dias").textContent   = dias + " dias";
+  document.getElementById("res-dias").textContent   = dias !== null ? dias + " dias" : "-- dias";
   document.getElementById("res-pct").textContent    = Math.round(pct) + "%";
   document.getElementById("res-vaso").textContent   = vbase + "mL";
   document.getElementById("res-total").textContent  = vtotal + "mL";
@@ -415,10 +417,12 @@ function atualizarReservatorio(galaoMlSheets, vbase, vtotal) {
   arc.setAttribute("stroke-dasharray", C.toFixed(1));
   arc.setAttribute("stroke-dashoffset", offset.toFixed(1));
   arc.setAttribute("stroke", cor);
-  document.getElementById("aut-num").textContent          = dias;
+  document.getElementById("aut-num").textContent          = dias !== null ? dias : "--";
   document.getElementById("aut-bar").style.width          = pct + "%";
   document.getElementById("aut-bar").style.background     = cor;
-  document.getElementById("aut-meta").textContent         = litros + "L restantes · consumo rastreado";
+  document.getElementById("aut-meta").textContent         = semDado
+    ? litros + "L restantes · aguardando primeira rega"
+    : litros + "L restantes · " + vtotal + "mL/rega";
 }
 
 function resetGalao() {
