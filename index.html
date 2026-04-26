@@ -105,7 +105,6 @@
 </head>
 <body>
 
-<!-- modal removido -->
 
 <header class="header">
   <div class="h-logo">
@@ -254,9 +253,9 @@
           <span><span class="ldot" style="background:#888780"></span>Média</span>
         </div>
         <div class="jbtns">
-          <button class="jbtn ativo" onclick="setJanela(this,8)">Hoje</button>
-          <button class="jbtn" onclick="setJanela(this,48)">7d</button>
-          <button class="jbtn" onclick="setJanela(this,96)">14d</button>
+          <button class="jbtn ativo" onclick="setJanela(this,96)">Hoje</button>
+          <button class="jbtn" onclick="setJanela(this,672)">7d</button>
+          <button class="jbtn" onclick="setJanela(this,1344)">14d</button>
           <button class="jbtn" onclick="setJanela(this,9999)">Tudo</button>
         </div>
       </div>
@@ -311,9 +310,7 @@
         <p class="drive-title">Relatórios por foto</p>
         <span style="font-size:11px;color:var(--text-ter)" id="analises-count">Carregando...</span>
       </div>
-      <div id="analises-lista">
-        <p style="font-size:13px;color:var(--text-ter)">Nenhuma análise ainda. Use o app SmartGrow Vision para analisar suas plantas.</p>
-      </div>
+      <div id="analises-lista"></div>
     </div>
   </div>
 
@@ -333,767 +330,512 @@
 </main>
 
 <script>
+// ── CONFIG ────────────────────────────────────────────────────
 const SHEET_ID  = "1cK0y2--PLGAo00W_UP4Ix53qcAVyQU9Na-uDlvNjYXo";
 const GAS_URL   = "https://script.google.com/macros/s/AKfycby56nn56erEcdsAG06Rg5wnkjVYau9uWnO73KT0MjMzk7uPJYujvms41aMHNYtu0IHt-A/exec";
 const DADOS_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=DADOS`;
 const EVTS_URL  = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=EVENTOS`;
+const GALAO_ML  = 7000;
 
-const GALAO_ML = 7000;
-let galaoAtual  = 7000;
-let chartInst   = null;
-let janelaAtual = 8;
-let todosOsDados = [];
-let dadosCicloP1 = null;
-let dadosCicloP2 = null;
-// Tenta recuperar dados do ciclo do localStorage
-try{const p1=localStorage.getItem("sg_ciclo_p1");if(p1)dadosCicloP1=JSON.parse(p1);}catch(e){}
-try{const p2=localStorage.getItem("sg_ciclo_p2");if(p2)dadosCicloP2=JSON.parse(p2);}catch(e){}
+// ── ESTADO GLOBAL ─────────────────────────────────────────────
+let galaoAtual    = 7000;
+let chartInst     = null;
+let janelaAtual   = 96; // 96 leituras = ~24h (4 leituras/h)
+let todosOsDados  = [];
+let dadosCicloP1  = null;
+let dadosCicloP2  = null;
 
+// Carrega dados do ciclo do localStorage imediatamente
+try { const v=localStorage.getItem("sg_ciclo_p1"); if(v) dadosCicloP1=JSON.parse(v); } catch(e){}
+try { const v=localStorage.getItem("sg_ciclo_p2"); if(v) dadosCicloP2=JSON.parse(v); } catch(e){}
 
 const FASES_LUZ = {
   germinacao:{h:17,liga:7,desliga:0},
   vegetacao: {h:17,liga:7,desliga:0},
   floracao:  {h:12,liga:8,desliga:20},
 };
+const FASE_NOMES = {germinacao:"Germinação",vegetacao:"Vegetação",floracao:"Floração"};
 
+// ── UTILITÁRIOS ───────────────────────────────────────────────
 function fatorInfo(f) {
-  if(f===0)  return{label:"Não regar",  cor:"#378ADD"};
-  if(f<=0.5) return{label:"Rega leve",  cor:"#639922"};
-  if(f<=1.0) return{label:"Rega normal",cor:"#BA7517"};
-  if(f<=1.5) return{label:"Rega intensa",cor:"#D85A30"};
-  return          {label:"Emergência", cor:"#E24B4A"};
+  if(f===0)  return {label:"Não regar",   cor:"#378ADD"};
+  if(f<=0.5) return {label:"Rega leve",   cor:"#639922"};
+  if(f<=1.0) return {label:"Rega normal", cor:"#BA7517"};
+  if(f<=1.5) return {label:"Rega intensa",cor:"#D85A30"};
+  return           {label:"Emergência",  cor:"#E24B4A"};
 }
 
 function diasEntre(dataStr) {
   if(!dataStr) return null;
-  const d = new Date(dataStr); if(isNaN(d)) return null;
-  return Math.floor((Date.now()-d.getTime())/86400000);
+  const d = new Date(dataStr);
+  if(isNaN(d)) return null;
+  return Math.floor((Date.now() - d.getTime()) / 86400000);
 }
+
 function fmtData(s) {
   if(!s) return "—";
-  const d=new Date(s); if(isNaN(d)) return "—";
+  const d = new Date(s);
+  if(isNaN(d)) return "—";
   return d.toLocaleDateString("pt-BR");
 }
 
-// ── RESERVATÓRIO ─────────────────────────────────
+function mostrarToast(msg) {
+  let t = document.getElementById("sg-toast");
+  if(!t) {
+    t = document.createElement("div");
+    t.id = "sg-toast";
+    t.style.cssText = "position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#1a1a18;color:#fff;padding:8px 18px;border-radius:20px;font-size:12px;z-index:999;transition:opacity .3s;pointer-events:none";
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.style.opacity = "1";
+  setTimeout(() => t.style.opacity = "0", 2500);
+}
+
+// ── RESERVATÓRIO ─────────────────────────────────────────────
 function atualizarReservatorio(galaoMlSheets, vbase, vtotal) {
-  if(galaoMlSheets>0) galaoAtual=galaoMlSheets;
-  const pct   = Math.max(0,Math.min(100,(galaoAtual/GALAO_ML)*100));
-  const litros= (galaoAtual/1000).toFixed(1);
-  // vtotal = volume real bombeado por rega (sistema completo, os dois vasos)
-  // Frequência estimada: 1 rega/dia na floração, 1 rega a cada 2 dias na vegetação
-  // Usamos vtotal direto como consumo por rega e assumimos ~1 rega/dia como base conservadora
-  const consumoPorRega = vtotal > 0 ? vtotal : 300;
-  const dias = Math.floor(galaoAtual / consumoPorRega); // dias se regar 1x/dia
-  const C=2*Math.PI*33, offset=C*(1-pct/100);
-  document.getElementById("res-litros").textContent=litros+"L";
-  document.getElementById("res-dias").textContent=dias+" dias";
-  document.getElementById("res-pct").textContent=Math.round(pct)+"%";
-  document.getElementById("res-vaso").textContent=vbase+"mL";
-  document.getElementById("res-total").textContent=vtotal+"mL";
-  const arc=document.getElementById("res-arc");
-  arc.setAttribute("stroke-dasharray",C.toFixed(1));
-  arc.setAttribute("stroke-dashoffset",offset.toFixed(1));
-  arc.setAttribute("stroke",pct<=20?"#E24B4A":pct<=40?"#BA7517":"#639922");
-  document.getElementById("aut-num").textContent=dias;
-  document.getElementById("aut-bar").style.width=pct+"%";
-  document.getElementById("aut-bar").style.background=pct<=20?"#E24B4A":"#639922";
-  document.getElementById("aut-meta").textContent=litros+"L restantes · consumo rastreado";
-}
-function resetGalao(){galaoAtual=GALAO_ML;atualizarReservatorio(GALAO_ML,0,0);}
+  if(galaoMlSheets > 0) galaoAtual = galaoMlSheets;
+  const pct    = Math.max(0, Math.min(100, (galaoAtual / GALAO_ML) * 100));
+  const litros = (galaoAtual / 1000).toFixed(1);
+  // vtotal = volume real bombeado por rega (dois vasos juntos)
+  // vbase  = por vaso. Se nunca regou, estima conservadoramente
+  const volPorRega = vtotal > 0 ? vtotal : (vbase > 0 ? vbase * 2 : 300);
+  const dias = volPorRega > 0 ? Math.floor(galaoAtual / volPorRega) : 0;
 
-// ── LUZ ──────────────────────────────────────────
+  const C = 2 * Math.PI * 33;
+  const offset = C * (1 - pct / 100);
+  const cor = pct <= 20 ? "#E24B4A" : pct <= 40 ? "#BA7517" : "#639922";
+
+  document.getElementById("res-litros").textContent = litros + "L";
+  document.getElementById("res-dias").textContent   = dias + " dias";
+  document.getElementById("res-pct").textContent    = Math.round(pct) + "%";
+  document.getElementById("res-vaso").textContent   = vbase + "mL";
+  document.getElementById("res-total").textContent  = vtotal + "mL";
+  const arc = document.getElementById("res-arc");
+  arc.setAttribute("stroke-dasharray", C.toFixed(1));
+  arc.setAttribute("stroke-dashoffset", offset.toFixed(1));
+  arc.setAttribute("stroke", cor);
+  document.getElementById("aut-num").textContent          = dias;
+  document.getElementById("aut-bar").style.width          = pct + "%";
+  document.getElementById("aut-bar").style.background     = cor;
+  document.getElementById("aut-meta").textContent         = litros + "L restantes · consumo rastreado";
+}
+
+function resetGalao() {
+  galaoAtual = GALAO_ML;
+  atualizarReservatorio(GALAO_ML, 0, 0);
+}
+
+// ── ILUMINAÇÃO ───────────────────────────────────────────────
 function atualizarLuz(fase, luzOn) {
-  const p=FASES_LUZ[fase]||FASES_LUZ.vegetacao;
-  const nomes={germinacao:"Germinação",vegetacao:"Vegetação",floracao:"Floração"};
-  const descl=p.desliga===0?"07:00 → 00:00":`${String(p.liga).padStart(2,"0")}:00 → ${String(p.desliga).padStart(2,"0")}:00`;
-  document.getElementById("luz-status").textContent=luzOn?"Ligada":"Desligada";
-  const b=document.getElementById("luz-badge");
-  b.textContent=luzOn?"ON":"OFF";
-  b.style.background=luzOn?"#e8f5e9":"#f5f5f5";
-  b.style.color=luzOn?"#2e7d32":"var(--text-sec)";
-  document.getElementById("luz-fase").textContent=nomes[fase]||fase;
-  document.getElementById("luz-horario").textContent=descl;
-  document.getElementById("luz-ciclo").textContent=`${p.h}h luz / ${24-p.h}h escuro`;
+  const p = FASES_LUZ[fase] || FASES_LUZ.vegetacao;
+  const descl = p.desliga === 0
+    ? "07:00 → 00:00"
+    : `${String(p.liga).padStart(2,"0")}:00 → ${String(p.desliga).padStart(2,"0")}:00`;
+
+  document.getElementById("luz-status").textContent = luzOn ? "Ligada" : "Desligada";
+  const b = document.getElementById("luz-badge");
+  b.textContent = luzOn ? "ON" : "OFF";
+  b.style.background = luzOn ? "#e8f5e9" : "#f5f5f5";
+  b.style.color = luzOn ? "#2e7d32" : "var(--text-sec)";
+  document.getElementById("luz-fase").textContent    = FASE_NOMES[fase] || fase;
+  document.getElementById("luz-horario").textContent = descl;
+  document.getElementById("luz-ciclo").textContent   = `${p.h}h luz / ${24 - p.h}h escuro`;
 }
 
-// ── PLANTAS ───────────────────────────────────────
+// ── PLANTAS ──────────────────────────────────────────────────
 function atualizarPlanta(idx, diasCiclo) {
-  const n=idx+1;
-  document.getElementById(`dias-p${n}`).textContent=diasCiclo>0?`Dia ${diasCiclo} no SmartGrow`:"Ciclo não iniciado";
-  const dados=idx===0?dadosCicloP1:dadosCicloP2;
-  const el=document.getElementById(`ciclo-p${n}`);
-  if(dados){
-    const dv=diasEntre(dados.germinacao), ds=diasEntre(dados.smartgrow);
-    const ls=[];
-    if(dv!==null) ls.push(`Idade: ${dv} dias (desde ${fmtData(dados.germinacao)})`);
-    if(dados.vaso1) ls.push(`Primeiro vaso: ${fmtData(dados.vaso1)}`);
-    if(ds!==null) ls.push(`No SmartGrow: ${ds} dias (desde ${fmtData(dados.smartgrow)})`);
-    if(dados.altura) ls.push(`Altura de entrada: ${dados.altura}cm`);
-    el.innerHTML=ls.join("<br>");
-  } else { el.innerHTML=""; }
+  const n    = idx + 1;
+  const dados = idx === 0 ? dadosCicloP1 : dadosCicloP2;
+  document.getElementById(`dias-p${n}`).textContent =
+    diasCiclo > 0 ? `Dia ${diasCiclo} no SmartGrow` : "Ciclo não iniciado";
+
+  const el = document.getElementById(`ciclo-p${n}`);
+  if(dados) {
+    const dv = diasEntre(dados.germinacao);
+    const ds = diasEntre(dados.smartgrow);
+    const ls = [];
+    if(dv !== null)   ls.push(`Idade: ${dv} dias (desde ${fmtData(dados.germinacao)})`);
+    if(dados.vaso1)   ls.push(`Primeiro vaso: ${fmtData(dados.vaso1)}`);
+    if(ds !== null)   ls.push(`No SmartGrow: ${ds} dias (desde ${fmtData(dados.smartgrow)})`);
+    if(dados.altura)  ls.push(`Altura de entrada: ${dados.altura}cm`);
+    el.innerHTML = ls.join("<br>");
+  } else {
+    el.innerHTML = "";
+  }
 }
 
-function setFase(idx,fase){
-  const id=idx===0?"fase-p1":"fase-p2",ii=idx===0?"info-p1":"info-p2";
-  document.querySelectorAll(`#${id} .pill`).forEach(p=>p.classList.toggle("ativa",p.textContent===fase));
-  document.getElementById(ii).innerHTML=`Fase atual: <strong>${fase}</strong>`;
+function setFase(idx, fase) {
+  const id = idx === 0 ? "fase-p1" : "fase-p2";
+  const ii = idx === 0 ? "info-p1" : "info-p2";
+  document.querySelectorAll(`#${id} .pill`).forEach(p =>
+    p.classList.toggle("ativa", p.textContent === fase));
+  document.getElementById(ii).innerHTML = `Fase atual: <strong>${fase}</strong>`;
 }
+
+// ── FORMULÁRIO INLINE DAS PLANTAS ────────────────────────────
+function toggleForm(n) {
+  const f = document.getElementById("form-p" + n);
+  if(!f) return;
+  const aberto = f.style.display === "block";
+  f.style.display = aberto ? "none" : "block";
+  if(!aberto) preencherFormulario(n);
+}
+
+function preencherFormulario(n) {
+  const dados = n === 1 ? dadosCicloP1 : dadosCicloP2;
+  if(!dados) return;
+  const p = n === 1 ? "p1" : "p2";
+  if(dados.germinacao) document.getElementById(p + "-germ").value     = dados.germinacao;
+  if(dados.vaso1)      document.getElementById(p + "-vaso1").value    = dados.vaso1;
+  if(dados.altura)     document.getElementById(p + "-altura").value   = dados.altura;
+  if(dados.smartgrow)  document.getElementById(p + "-smartgrow").value = dados.smartgrow;
+}
+
+function preencherFormularios() {
+  if(dadosCicloP1) preencherFormulario(1);
+  if(dadosCicloP2) preencherFormulario(2);
+}
+
+function salvarDadosPlanta(n) {
+  const p = n === 1 ? "p1" : "p2";
+  const dados = {
+    germinacao: document.getElementById(p + "-germ").value,
+    vaso1:      document.getElementById(p + "-vaso1").value,
+    altura:     document.getElementById(p + "-altura").value,
+    smartgrow:  document.getElementById(p + "-smartgrow").value,
+  };
+  if(n === 1) dadosCicloP1 = dados; else dadosCicloP2 = dados;
+  // Persiste no localStorage imediatamente
+  localStorage.setItem("sg_ciclo_p" + n, JSON.stringify(dados));
+  atualizarPlanta(n - 1, 0);
+  document.getElementById("form-p" + n).style.display = "none";
+  mostrarToast(`Dados da Planta ${n} salvos!`);
+  // Envia ao Sheets em background
+  fetch(GAS_URL, {
+    method: "POST",
+    headers: {"Content-Type": "text/plain"},
+    body: JSON.stringify({tipo:"dados_ciclo", fasePlanta:"germinacao", [p]: dados})
+  }).catch(() => {});
+}
+
+// ── GRÁFICO ──────────────────────────────────────────────────
+function renderChart(dados) {
+  const slice = dados.slice(0, janelaAtual).reverse();
+  if(chartInst) chartInst.destroy();
+  chartInst = new Chart(document.getElementById("sg-chart"), {
+    type: "line",
+    data: {
+      labels: slice.map(d => d.ts),
+      datasets: [
+        {label:"Vaso 1", data:slice.map(d=>d.u1), borderColor:"#378ADD", backgroundColor:"transparent", borderWidth:1.5, pointRadius:3, tension:0.3},
+        {label:"Vaso 2", data:slice.map(d=>d.u2), borderColor:"#639922", backgroundColor:"transparent", borderWidth:1.5, pointRadius:3, tension:0.3},
+        {label:"Média",  data:slice.map(d=>d.media), borderColor:"#888780", backgroundColor:"transparent", borderWidth:1, borderDash:[4,3], pointRadius:2, tension:0.3},
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {legend: {display: false}},
+      scales: {
+        y: {min:0, max:100, ticks:{font:{size:11}, callback:v=>v+"%"}, grid:{color:"rgba(0,0,0,0.04)"}},
+        x: {ticks:{font:{size:10}, maxRotation:45, autoSkip:true, maxTicksLimit:8}, grid:{display:false}}
+      }
+    }
+  });
+}
+
+function setJanela(btn, n) {
+  janelaAtual = n;
+  document.querySelectorAll(".jbtn").forEach(b => b.classList.remove("ativo"));
+  btn.classList.add("ativo");
+  if(todosOsDados.length) renderChart(todosOsDados);
+}
+
+// ── COLHEITA E PDF ────────────────────────────────────────────
 function colherPlanta(numPlanta) {
-  if (!confirm(`Registrar colheita da Planta ${numPlanta}?\nIsso vai gerar o relatório PDF e salvar o ciclo no histórico.`)) return;
+  if(!confirm(`Registrar colheita da Planta ${numPlanta}?\nIsso vai gerar o relatório PDF e salvar o ciclo no histórico.`)) return;
+  const ciclo = numPlanta === 1 ? dadosCicloP1 : dadosCicloP2;
+  const st = document.getElementById("sg-status");
+  st.textContent = "Gerando PDF..."; st.className = "badge badge-load";
 
-  const dadosCiclo = numPlanta === 1 ? dadosCicloP1 : dadosCicloP2;
-  const statusEl   = document.getElementById("sg-status");
-  statusEl.textContent = "Gerando PDF...";
-  statusEl.className   = "badge badge-load";
+  fetch(DADOS_URL).then(r => r.text()).then(txt => {
+    const json = JSON.parse(txt.replace(/^[^(]+\(|\);?$/g, ""));
+    const rows = (json.table.rows || []).filter(r => r.c && r.c[0] && r.c[0].v);
+    const dados = rows.map(r => {
+      const c = r.c;
+      const sv = (i,df="") => c[i]&&c[i].v!=null ? String(c[i].v) : df;
+      const nv = (i,df=0)  => c[i]&&c[i].v!=null ? parseFloat(c[i].v)||df : df;
+      return {
+        ts: String(c[0]?(c[0].f||c[0].v||""):"").substring(0,16),
+        hora: sv(1), u1:nv(2), u2:nv(3), media:nv(4),
+        vbase:nv(8), vtotal:nv(9), fase:sv(11,"vegetacao"),
+        diasCiclo:nv(12), fator:nv(14,1.0), diag:sv(15),
+      };
+    }).filter(d => d.diag && !d.diag.startsWith("Erro"));
 
-  // Busca todos os dados da planilha para o relatório
-  fetch(DADOS_URL)
-    .then(r => r.text())
-    .then(txt => {
-      const json = JSON.parse(txt.replace(/^[^(]+\(|\);?$/g, ""));
-      const rows = (json.table.rows || []).filter(r => r.c && r.c[0] && r.c[0].v);
-      const dados = rows.map(r => {
-        const c = r.c;
-        const sv = (i, df="") => c[i] && c[i].v != null ? String(c[i].v) : df;
-        const nv = (i, df=0)  => c[i] && c[i].v != null ? parseFloat(c[i].v) || df : df;
-        return {
-          ts: String(c[0] ? (c[0].f || c[0].v || "") : "").substring(0, 16),
-          hora: sv(1), u1: nv(2), u2: nv(3), media: nv(4),
-          vbase: nv(8), vtotal: nv(9), fase: sv(11, "vegetacao"),
-          diasCiclo: nv(12), luzOn: sv(13) === "ON",
-          fator: nv(14, 1.0), diag: sv(15),
-        };
-      }).filter(d => d.diag && !d.diag.startsWith("Erro"));
-
-      gerarRelatorioPDF(numPlanta, dadosCiclo, dados);
-    })
-    .catch(err => {
-      alert("Erro ao buscar dados: " + err.message);
-      statusEl.textContent = "Ao vivo"; statusEl.className = "badge badge-live";
-    });
+    gerarRelatorioPDF(numPlanta, ciclo, dados);
+    st.textContent = "Ao vivo"; st.className = "badge badge-live";
+  }).catch(err => {
+    alert("Erro ao buscar dados: " + err.message);
+    st.textContent = "Ao vivo"; st.className = "badge badge-live";
+  });
 }
 
-// ── GERADOR DE PDF ────────────────────────────────
 function gerarRelatorioPDF(numPlanta, ciclo, dados) {
-  // Cálculos do ciclo
-  const totalDias      = ciclo ? (diasEntre(ciclo.germinacao) || 0) : 0;
-  const diasSmartGrow  = ciclo ? (diasEntre(ciclo.smartgrow)  || 0) : 0;
-  const totalAgua      = dados.reduce((s, d) => s + d.vtotal, 0);
-  const mediaUmidade   = dados.length ? (dados.reduce((s,d) => s+d.media, 0) / dados.length).toFixed(1) : "--";
-  const maxFator       = dados.length ? Math.max(...dados.map(d => d.fator)).toFixed(1) : "--";
+  const totalDias     = ciclo ? (diasEntre(ciclo.germinacao) || 0) : 0;
+  const diasSmartGrow = ciclo ? (diasEntre(ciclo.smartgrow)  || 0) : 0;
+  const totalAgua     = dados.reduce((s,d) => s + d.vtotal, 0);
+  const mediaUmidade  = dados.length ? (dados.reduce((s,d) => s+d.media, 0) / dados.length).toFixed(1) : "--";
+  const maxFator      = dados.length ? Math.max(...dados.map(d => d.fator)).toFixed(1) : "--";
 
-  // Agrupa por fase
   const fases = {};
   dados.forEach(d => {
-    if (!fases[d.fase]) fases[d.fase] = { count: 0, agua: 0, umidadeSum: 0 };
+    if(!fases[d.fase]) fases[d.fase] = {count:0, agua:0, umidadeSum:0};
     fases[d.fase].count++;
     fases[d.fase].agua += d.vtotal;
     fases[d.fase].umidadeSum += d.media;
   });
 
-  // Últimas leituras para resumo
-  const ultimas = dados.slice(0, 10);
-  const primeiras= dados.slice(-10).reverse();
-
-  // Diagnósticos únicos marcantes
   const diagsUnicos = [...new Set(dados.map(d=>d.diag).filter(d=>d&&d.length>5))].slice(0,6);
-
-  // Dados semanais para gráfico
-  const porSemana = [];
   const passo = Math.max(1, Math.floor(dados.length / 12));
-  for (let i = dados.length-1; i >= 0; i -= passo) {
-    porSemana.push({ ts: dados[i].ts.substring(5,10), media: dados[i].media, vtotal: dados[i].vtotal });
-  }
+  const porSemana = [];
+  for(let i = dados.length-1; i >= 0; i -= passo)
+    porSemana.push({ts:dados[i].ts.substring(5,10), media:dados[i].media, vtotal:dados[i].vtotal});
   porSemana.reverse();
 
-  // Gera SVG do gráfico de umidade
-  const svgUmidade = gerarSVGUmidade(porSemana);
-  const svgAgua    = gerarSVGAgua(porSemana);
-
-  // Resumo compacto para storage (max ~50KB)
-  const resumoCiclo = {
-    id:          Date.now(),
-    planta:      numPlanta,
-    dataColheita:new Date().toLocaleDateString("pt-BR"),
-    germinacao:  ciclo ? ciclo.germinacao : "",
-    smartgrow:   ciclo ? ciclo.smartgrow  : "",
-    alturaEntrada: ciclo ? ciclo.altura   : "",
+  const resumo = {
+    id: Date.now(), planta: numPlanta,
+    dataColheita: new Date().toLocaleDateString("pt-BR"),
+    germinacao: ciclo?.germinacao||"", smartgrow: ciclo?.smartgrow||"",
+    alturaEntrada: ciclo?.altura||"",
     totalDias, diasSmartGrow,
     totalAguaML: Math.round(totalAgua),
     mediaUmidade: parseFloat(mediaUmidade),
-    maxFator:    parseFloat(maxFator),
+    maxFator: parseFloat(maxFator),
     totalLeituras: dados.length,
     fases: Object.entries(fases).map(([f,v]) => ({
-      fase: f,
-      leituras: v.count,
-      aguaML: Math.round(v.agua),
-      umidadeMedia: (v.umidadeSum/v.count).toFixed(1)
+      fase:f, leituras:v.count, aguaML:Math.round(v.agua),
+      umidadeMedia:(v.umidadeSum/v.count).toFixed(1)
     })),
     diagsMarcos: diagsUnicos,
   };
 
-  // Salva no storage persistente
-  salvarCicloNoHistorico(resumoCiclo);
-
-  // Monta HTML do PDF
-  const html = montarHTMLRelatorio(numPlanta, ciclo, resumoCiclo, svgUmidade, svgAgua, diagsUnicos);
-
-  // Abre janela de impressão / save as PDF
+  salvarCicloNoHistorico(resumo);
+  const html = montarHTMLRelatorio(numPlanta, ciclo, resumo, diagsUnicos, porSemana);
   const janela = window.open("", "_blank");
   janela.document.write(html);
   janela.document.close();
-  setTimeout(() => {
-    janela.focus();
-    janela.print();
-  }, 800);
-
-  document.getElementById("sg-status").textContent = "Ao vivo";
-  document.getElementById("sg-status").className   = "badge badge-live";
+  setTimeout(() => { janela.focus(); janela.print(); }, 800);
 }
 
-function gerarSVGUmidade(pontos) {
-  if (!pontos.length) return "";
-  const W=560, H=120, pad=30;
-  const max=100, min=0;
-  const xs = pontos.map((_,i) => pad + i*(W-2*pad)/(Math.max(pontos.length-1,1)));
-  const y  = v => H - pad - (v-min)/(max-min)*(H-2*pad);
-  const pts = pontos.map((p,i) => `${xs[i]},${y(p.media)}`).join(" ");
-  const labels = pontos.filter((_,i) => i % Math.max(1,Math.floor(pontos.length/6)) === 0);
-  const lxs    = labels.map((_,i) => xs[i * Math.max(1,Math.floor(pontos.length/6))]);
-  return `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:560px">
+function montarHTMLRelatorio(n, ciclo, r, diags, pontos) {
+  const fasesHTML = r.fases.map(f =>
+    `<tr><td>${FASE_NOMES[f.fase]||f.fase}</td><td>${f.leituras}</td><td>${f.aguaML}mL</td><td>${f.umidadeMedia}%</td></tr>`
+  ).join("");
+
+  // SVG gráfico de umidade inline
+  const W=560,H=120,pad=30;
+  const xs = pontos.map((_,i)=>pad+i*(W-2*pad)/(Math.max(pontos.length-1,1)));
+  const yU = v=>H-pad-(v/100)*(H-2*pad);
+  const pts = pontos.map((p,i)=>`${xs[i]},${yU(p.media)}`).join(" ");
+  const svgU = pontos.length ? `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%">
     <rect width="${W}" height="${H}" fill="#f9faf9" rx="4"/>
-    <line x1="${pad}" y1="${y(75)}" x2="${W-pad}" y2="${y(75)}" stroke="#4a7c59" stroke-width="0.5" stroke-dasharray="4,3"/>
-    <line x1="${pad}" y1="${y(35)}" x2="${W-pad}" y2="${y(35)}" stroke="#BA7517" stroke-width="0.5" stroke-dasharray="4,3"/>
-    <text x="${W-pad+2}" y="${y(75)+4}" font-size="8" fill="#4a7c59">75%</text>
-    <text x="${W-pad+2}" y="${y(35)+4}" font-size="8" fill="#BA7517">35%</text>
+    <line x1="${pad}" y1="${yU(75)}" x2="${W-pad}" y2="${yU(75)}" stroke="#4a7c59" stroke-width="0.5" stroke-dasharray="4,3"/>
+    <line x1="${pad}" y1="${yU(35)}" x2="${W-pad}" y2="${yU(35)}" stroke="#BA7517" stroke-width="0.5" stroke-dasharray="4,3"/>
+    <text x="${W-pad+2}" y="${yU(75)+4}" font-size="8" fill="#4a7c59">75%</text>
+    <text x="${W-pad+2}" y="${yU(35)+4}" font-size="8" fill="#BA7517">35%</text>
     <polyline points="${pts}" fill="none" stroke="#378ADD" stroke-width="1.5" stroke-linejoin="round"/>
-    ${labels.map((p,i)=>`<text x="${lxs[i]}" y="${H-4}" font-size="8" fill="#888" text-anchor="middle">${p.ts}</text>`).join("")}
-    <text x="${pad-2}" y="${pad-6}" font-size="9" fill="#444" font-weight="bold">Umidade Média do Solo (%)</text>
-  </svg>`;
-}
+    ${pontos.filter((_,i)=>i%Math.max(1,Math.floor(pontos.length/6))===0).map((p,i)=>
+      `<text x="${xs[i*Math.max(1,Math.floor(pontos.length/6))]}" y="${H-4}" font-size="8" fill="#888" text-anchor="middle">${p.ts}</text>`).join("")}
+  </svg>` : "";
 
-function gerarSVGAgua(pontos) {
-  if (!pontos.length) return "";
-  const W=560, H=100, pad=30;
-  const maxV = Math.max(...pontos.map(p=>p.vtotal), 1);
-  const bw = (W-2*pad)/pontos.length - 2;
-  const bars = pontos.map((p,i) => {
-    const bh = (p.vtotal/maxV)*(H-2*pad);
-    const bx = pad + i*((W-2*pad)/pontos.length);
-    const by = H-pad-bh;
-    return `<rect x="${bx}" y="${by}" width="${bw}" height="${bh}" fill="#639922" rx="2" opacity="0.8"/>`;
-  }).join("");
-  return `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:560px">
-    <rect width="${W}" height="${H}" fill="#f9faf9" rx="4"/>
-    ${bars}
-    <text x="${pad-2}" y="${pad-6}" font-size="9" fill="#444" font-weight="bold">Volume de Água por Rega (mL)</text>
-  </svg>`;
-}
-
-function montarHTMLRelatorio(numPlanta, ciclo, r, svgUmidade, svgAgua, diags) {
-  const faseNomes = {germinacao:"Germinação",vegetacao:"Vegetação",floracao:"Floração"};
-  const fasesHTML = r.fases.map(f => `
-    <tr>
-      <td>${faseNomes[f.fase]||f.fase}</td>
-      <td>${f.leituras}</td>
-      <td>${f.aguaML} mL</td>
-      <td>${f.umidadeMedia}%</td>
-    </tr>`).join("");
-
-  return `<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-<meta charset="UTF-8">
-<title>SmartGrow — Relatório Planta ${numPlanta}</title>
-<style>
-  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=DM+Mono&display=swap');
-  *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:'DM Sans',sans-serif;color:#1a1a18;background:#fff;padding:40px;max-width:800px;margin:0 auto;font-size:13px}
-  @media print{body{padding:20px} .no-print{display:none}}
-
-  /* CAPA */
-  .capa{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:40px;padding-bottom:24px;border-bottom:3px solid #4a7c59}
-  .logo-area h1{font-size:28px;color:#4a7c59;font-weight:700;margin:0}
-  .logo-area p{font-size:12px;color:#888;margin:2px 0 0}
-  .capa-meta{text-align:right}
-  .capa-meta .badge-planta{background:#4a7c59;color:#fff;font-size:11px;padding:3px 12px;border-radius:20px;display:inline-block;margin-bottom:6px}
-  .capa-meta h2{font-size:18px;font-weight:500;margin:4px 0}
-  .capa-meta p{font-size:11px;color:#888}
-
-  /* SEÇÕES */
-  .sec{margin-bottom:28px}
-  .sec-title{font-size:11px;font-weight:700;color:#4a7c59;text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px;padding-bottom:4px;border-bottom:1px solid #e8f2eb}
-
-  /* CARDS DE RESUMO */
-  .resumo-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
-  .resumo-card{background:#f4f4f1;border-radius:8px;padding:10px 14px}
-  .resumo-card .val{font-size:22px;font-weight:500;font-family:'DM Mono',monospace;color:#1a1a18}
-  .resumo-card .lbl{font-size:10px;color:#888;margin-top:2px}
-
-  /* TABELA */
-  table{width:100%;border-collapse:collapse;font-size:12px}
-  th{background:#e8f2eb;color:#1B5E20;font-weight:600;padding:7px 10px;text-align:left;font-size:11px}
-  td{padding:6px 10px;border-bottom:1px solid #f0f0f0}
-  tr:last-child td{border-bottom:none}
-
-  /* DIAGNÓSTICOS */
-  .diag-item{background:#f9faf9;border-left:3px solid #4a7c59;padding:6px 10px;margin-bottom:6px;border-radius:0 4px 4px 0;font-size:12px}
-
-  /* LINHA DO TEMPO */
-  .timeline-item{display:flex;gap:12px;margin-bottom:8px;align-items:flex-start}
-  .tl-dot{width:8px;height:8px;border-radius:50%;background:#4a7c59;flex-shrink:0;margin-top:3px}
-  .tl-content p{font-size:12px;margin:0}
-  .tl-content span{font-size:10px;color:#888}
-
-  /* RODAPÉ */
-  .rodape{margin-top:40px;padding-top:16px;border-top:1px solid #e0e0e0;display:flex;justify-content:space-between;font-size:10px;color:#aaa}
-
-  /* SVG */
-  .grafico{margin:10px 0;background:#f9faf9;border-radius:8px;padding:12px}
-</style>
-</head>
-<body>
-
-<!-- CAPA -->
+  return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
+<title>SmartGrow — Relatório Planta ${n}</title>
+</head><body>
 <div class="capa">
-  <div class="logo-area">
-    <h1>SmartGrow</h1>
-    <p>Sistema de Cultivo Indoor Automatizado</p>
-    <p style="margin-top:8px;font-size:11px;color:#4a7c59">Relatório de Ciclo — Auditoria de Cultivo</p>
-  </div>
-  <div class="capa-meta">
-    <span class="badge-planta">Planta ${numPlanta} — Vaso ${numPlanta}</span>
-    <h2>Ciclo Encerrado</h2>
-    <p>Colheita: ${r.dataColheita}</p>
-    <p>Gerado por SmartGrow v1.0</p>
+  <div><h1>SmartGrow</h1><p class="sub">Relatório de Ciclo — Auditoria de Cultivo</p><p class="sub" style="margin-top:6px;color:#4a7c59">SGRW_DC_P${n}_${r.dataColheita.replace(/\//g,"-")}</p></div>
+  <div style="text-align:right">
+    <span style="background:#4a7c59;color:#fff;font-size:11px;padding:3px 12px;border-radius:20px;display:inline-block;margin-bottom:6px">Planta ${n} — Vaso ${n}</span>
+    <p style="font-size:14px;font-weight:500">Ciclo Encerrado</p>
+    <p class="sub">Colheita: ${r.dataColheita}</p>
   </div>
 </div>
 
-<!-- RESUMO EXECUTIVO -->
-<div class="sec">
-  <p class="sec-title">Resumo Executivo</p>
-  <div class="resumo-grid">
-    <div class="resumo-card">
-      <p class="val">${r.totalDias}</p>
-      <p class="lbl">dias de vida total</p>
-    </div>
-    <div class="resumo-card">
-      <p class="val">${r.diasSmartGrow}</p>
-      <p class="lbl">dias no SmartGrow</p>
-    </div>
-    <div class="resumo-card">
-      <p class="val">${(r.totalAguaML/1000).toFixed(1)}L</p>
-      <p class="lbl">água total consumida</p>
-    </div>
-    <div class="resumo-card">
-      <p class="val">${r.mediaUmidade}%</p>
-      <p class="lbl">umidade média do ciclo</p>
-    </div>
-  </div>
-  <div class="resumo-grid">
-    <div class="resumo-card">
-      <p class="val">${ciclo ? ciclo.altura || "--" : "--"}cm</p>
-      <p class="lbl">altura de entrada</p>
-    </div>
-    <div class="resumo-card">
-      <p class="val">${r.maxFator}</p>
-      <p class="lbl">fator rega máximo</p>
-    </div>
-    <div class="resumo-card">
-      <p class="val">${r.totalLeituras}</p>
-      <p class="lbl">leituras registradas</p>
-    </div>
-    <div class="resumo-card">
-      <p class="val">${r.fases.length}</p>
-      <p class="lbl">fases completadas</p>
-    </div>
-  </div>
+<p class="sec-title">Resumo Executivo</p>
+<div class="grid4">
+  <div class="card-m"><p class="v">${r.totalDias}</p><p class="l">dias de vida total</p></div>
+  <div class="card-m"><p class="v">${r.diasSmartGrow}</p><p class="l">dias no SmartGrow</p></div>
+  <div class="card-m"><p class="v">${(r.totalAguaML/1000).toFixed(1)}L</p><p class="l">água consumida</p></div>
+  <div class="card-m"><p class="v">${r.mediaUmidade}%</p><p class="l">umidade média</p></div>
+  <div class="card-m"><p class="v">${ciclo?.altura||"--"}cm</p><p class="l">altura de entrada</p></div>
+  <div class="card-m"><p class="v">${r.maxFator}</p><p class="l">fator rega máx.</p></div>
+  <div class="card-m"><p class="v">${r.totalLeituras}</p><p class="l">leituras</p></div>
+  <div class="card-m"><p class="v">${r.fases.length}</p><p class="l">fases completadas</p></div>
 </div>
 
-<!-- LINHA DO TEMPO DO CICLO -->
-<div class="sec">
-  <p class="sec-title">Linha do Tempo</p>
-  <div class="timeline-item">
-    <div class="tl-dot"></div>
-    <div class="tl-content">
-      <p><strong>Germinação</strong></p>
-      <span>${ciclo ? fmtData(ciclo.germinacao) : "--"}</span>
-    </div>
-  </div>
-  <div class="timeline-item">
-    <div class="tl-dot"></div>
-    <div class="tl-content">
-      <p><strong>Primeiro vaso (potinho)</strong></p>
-      <span>${ciclo ? fmtData(ciclo.vaso1) : "--"}</span>
-    </div>
-  </div>
-  <div class="timeline-item">
-    <div class="tl-dot"></div>
-    <div class="tl-content">
-      <p><strong>Entrada no SmartGrow</strong> — ${ciclo ? ciclo.altura || "--" : "--"}cm de altura</p>
-      <span>${ciclo ? fmtData(ciclo.smartgrow) : "--"}</span>
-    </div>
-  </div>
-  <div class="timeline-item">
-    <div class="tl-dot" style="background:#E24B4A"></div>
-    <div class="tl-content">
-      <p><strong>Colheita</strong></p>
-      <span>${r.dataColheita}</span>
-    </div>
-  </div>
-</div>
+<p class="sec-title">Linha do Tempo</p>
+${[
+  ["Germinação", fmtData(ciclo?.germinacao)],
+  ["Primeiro vaso", fmtData(ciclo?.vaso1)],
+  [`Entrada no SmartGrow — ${ciclo?.altura||"--"}cm`, fmtData(ciclo?.smartgrow)],
+  ["Colheita", r.dataColheita],
+].map(([l,d],i)=>`<div class="tl"><div class="tl-dot" ${i===3?'style="background:#E24B4A"':''}></div><div><strong>${l}</strong> <span style="color:#888;font-size:11px">${d}</span></div></div>`).join("")}
 
-<!-- CONSUMO POR FASE -->
-<div class="sec">
-  <p class="sec-title">Consumo por Fase</p>
-  <table>
-    <tr>
-      <th>Fase</th>
-      <th>Leituras</th>
-      <th>Água Total</th>
-      <th>Umidade Média</th>
-    </tr>
-    ${fasesHTML}
-  </table>
-</div>
+<p class="sec-title">Consumo por Fase</p>
+<table><tr><th>Fase</th><th>Leituras</th><th>Água Total</th><th>Umidade Média</th></tr>${fasesHTML}</table>
 
-<!-- GRÁFICOS -->
-<div class="sec">
-  <p class="sec-title">Histórico de Umidade do Solo</p>
-  <div class="grafico">${svgUmidade}</div>
-  <p style="font-size:10px;color:#888;margin-top:4px">Linha verde = alvo 75% | Linha laranja = mínimo 35%</p>
-</div>
+<p class="sec-title">Histórico de Umidade do Solo</p>
+<div style="background:#f9faf9;border-radius:8px;padding:12px;margin-bottom:8px">${svgU}</div>
+<p style="font-size:10px;color:#888;margin-bottom:16px">Linha verde = alvo 75% | Linha laranja = mínimo 35%</p>
 
-<div class="sec">
-  <p class="sec-title">Volume de Rega ao Longo do Ciclo</p>
-  <div class="grafico">${svgAgua}</div>
-</div>
+<p class="sec-title">Diagnósticos Marcantes da IA</p>
+${diags.map(d=>`<div class="diag">${d}</div>`).join("")||'<p style="color:#888;font-size:12px">Nenhum diagnóstico registrado.</p>'}
 
-<!-- DIAGNÓSTICOS DA IA -->
-<div class="sec">
-  <p class="sec-title">Diagnósticos Marcantes da IA</p>
-  ${diags.map(d => `<div class="diag-item">${d}</div>`).join("") || '<p style="color:#888;font-size:12px">Nenhum diagnóstico registrado.</p>'}
-</div>
-
-<!-- RODAPÉ -->
 <div class="rodape">
   <span>SmartGrow — Sistema de Cultivo Indoor Automatizado</span>
-  <span>Planta ${numPlanta} · Ciclo encerrado em ${r.dataColheita}</span>
+  <span>Planta ${n} · Colheita em ${r.dataColheita}</span>
 </div>
-
-<script>
-  window.onload = function() {
-    // Pequeno delay para garantir que fontes e SVGs carregaram
-    setTimeout(function() {
-      window.print();
-    }, 500);
-  };
-<\/script>
-</body>
-</html>`;
+</body></html>`;
 }
 
-// ── STORAGE PERSISTENTE (localStorage) ─────────────
-function salvarCicloNoHistorico(resumo) {
+async function salvarCicloNoHistorico(resumo) {
   try {
     let historico = [];
-    const existing = localStorage.getItem("sg_historico_ciclos");
-    if (existing) historico = JSON.parse(existing);
+    try {
+      const existing = await window.storage.get("historico_ciclos");
+      if(existing) historico = JSON.parse(existing.value);
+    } catch(e){}
     historico.push(resumo);
-    localStorage.setItem("sg_historico_ciclos", JSON.stringify(historico));
-    console.log("[STORAGE] Ciclo salvo no histórico");
-  } catch(e) {
-    console.warn("[STORAGE] Falha ao salvar:", e);
-  }
+    await window.storage.set("historico_ciclos", JSON.stringify(historico));
+  } catch(e) {}
 }
 
-function carregarHistorico() {
+async function carregarHistorico() {
   try {
-    const existing = localStorage.getItem("sg_historico_ciclos");
-    if (!existing) return Promise.resolve([]);
-    return Promise.resolve(JSON.parse(existing));
-  } catch(e) {
-    return Promise.resolve([]);
-  }
+    const result = await window.storage.get("historico_ciclos");
+    if(!result) return [];
+    return JSON.parse(result.value);
+  } catch(e) { return []; }
 }
 
+// ── EVENTOS ──────────────────────────────────────────────────
+function carregarEventos() {
+  fetch(EVTS_URL).then(r => r.text()).then(txt => {
+    const json = JSON.parse(txt.replace(/^[^(]+\(|\);?$/g, ""));
+    const rows = (json.table.rows || []).filter(r => r.c && r.c[0] && r.c[0].v);
 
+    for(const r of rows) {
+      const c    = r.c;
+      const tipo = String(c[2]&&c[2].v!=null ? c[2].v : "");
+      const desc = String(c[3]&&c[3].v!=null ? c[3].v : "");
 
-// ── GRÁFICO ───────────────────────────────────────
-function renderChart(dados){
-  const slice=dados.slice(0,janelaAtual).reverse();
-  if(chartInst) chartInst.destroy();
-  chartInst=new Chart(document.getElementById("sg-chart"),{
-    type:"line",
-    data:{labels:slice.map(d=>d.hora||(d.ts?d.ts.substring(11,16):"--")),datasets:[
-      {label:"Vaso 1",data:slice.map(d=>d.u1),borderColor:"#378ADD",backgroundColor:"transparent",borderWidth:1.5,pointRadius:3,tension:0.3},
-      {label:"Vaso 2",data:slice.map(d=>d.u2),borderColor:"#639922",backgroundColor:"transparent",borderWidth:1.5,pointRadius:3,tension:0.3},
-      {label:"Média",data:slice.map(d=>d.media),borderColor:"#888780",backgroundColor:"transparent",borderWidth:1,borderDash:[4,3],pointRadius:2,tension:0.3},
-    ]},
-    options:{responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{display:false}},
-      scales:{
-        y:{min:0,max:100,ticks:{font:{size:11},callback:v=>v+"%"},grid:{color:"rgba(0,0,0,0.04)"}},
-        x:{ticks:{font:{size:10},maxRotation:45,autoSkip:true,maxTicksLimit:8},grid:{display:false}}
-      }}
-  });
-}
-function setJanela(btn,n){janelaAtual=n;document.querySelectorAll(".jbtn").forEach(b=>b.classList.remove("ativo"));btn.classList.add("ativo");if(todosOsDados.length)renderChart(todosOsDados);}
+      // Carrega dados do ciclo do Sheets (só se ainda não temos do localStorage)
+      if(tipo === "dados_ciclo_P1" && !dadosCicloP1) {
+        try { dadosCicloP1 = JSON.parse(desc); localStorage.setItem("sg_ciclo_p1", desc); } catch(e){}
+      }
+      if(tipo === "dados_ciclo_P2" && !dadosCicloP2) {
+        try { dadosCicloP2 = JSON.parse(desc); localStorage.setItem("sg_ciclo_p2", desc); } catch(e){}
+      }
 
-// ── MODAL CICLO ───────────────────────────────────
-function abrirModal(cicloId){
-  if(cicloModalAberto) return;
-  // Verifica se já respondemos esse ciclo_id no localStorage
-  if(cicloId){
-    const jaRespondido = localStorage.getItem("sg_ciclo_respondido");
-    if(jaRespondido === String(cicloId)) return;
-  }
-  cicloModalAberto=true;
-  const hoje=new Date().toISOString().split("T")[0];
-  document.getElementById("p1-smartgrow").value=hoje;
-  document.getElementById("p2-smartgrow").value=hoje;
-  document.getElementById("modal-ciclo").dataset.cicloId = cicloId||"";
-  document.getElementById("modal-ciclo").classList.remove("hidden");
-}
-function fecharModal(){
-  document.getElementById("modal-ciclo").classList.add("hidden");
-  const cicloId = document.getElementById("modal-ciclo").dataset.cicloId;
-  if(cicloId) localStorage.setItem("sg_ciclo_respondido", String(cicloId));
-}
-function toggleForm(n){
-  const f=document.getElementById("form-p"+n);
-  if(!f) return;
-  const aberto = f.style.display==="block";
-  f.style.display = aberto ? "none" : "block";
-  if(!aberto) preencherFormulario(n);
-}
+      // Análises visuais — renderiza na seção
+      if(tipo.startsWith("analise_visual_")) {
+        const num = tipo.includes("P2") ? "2" : "1";
+        let dados = {};
+        try { dados = JSON.parse(desc); } catch(e){}
+        const cores = {"ótimo":"#4a7c59","bom":"#639922","atenção":"#BA7517","crítico":"#E24B4A"};
+        const cor   = cores[dados.estado] || "#888";
+        const hora  = String(c[1]&&c[1].f ? c[1].f : c[1]&&c[1].v ? c[1].v : "").substring(0,5);
+        const itemEl = document.createElement("div");
+        itemEl.className = "file-row";
+        itemEl.innerHTML = `
+          <div class="foto-thumb" style="flex-direction:column;gap:2px">
+            <span style="font-size:16px">🌿</span>
+            <span style="font-size:9px;color:var(--green);font-weight:500">P${num}</span>
+          </div>
+          <div style="flex:1;min-width:0">
+            <p class="file-name">${dados.ts||hora} — Planta ${num}</p>
+            <p class="file-meta" style="color:${cor}">${(dados.estado||"--").charAt(0).toUpperCase()+(dados.estado||"--").slice(1)} · ${dados.fase||"--"} · ${dados.altura?dados.altura+"cm":"--"}</p>
+            <p class="file-meta" style="margin-top:2px">${dados.resumo?dados.resumo.substring(0,80)+"...":""}</p>
+          </div>`;
+        const lista = document.getElementById("analises-lista");
+        if(lista.children.length < 6) lista.appendChild(itemEl);
+        document.getElementById("analises-count").textContent =
+          lista.children.length + " análise" + (lista.children.length > 1 ? "s" : "");
+      }
+    }
 
-function preencherFormulario(n){
-  const dados = n===1 ? dadosCicloP1 : dadosCicloP2;
-  const p = n===1 ? "p1" : "p2";
-  if(!dados) return;
-  if(dados.germinacao) document.getElementById(p+"-germ").value      = dados.germinacao;
-  if(dados.vaso1)      document.getElementById(p+"-vaso1").value     = dados.vaso1;
-  if(dados.altura)     document.getElementById(p+"-altura").value    = dados.altura;
-  if(dados.smartgrow)  document.getElementById(p+"-smartgrow").value = dados.smartgrow;
-}
+    // Se não encontrou análises visuais, mostra mensagem
+    const listaAn = document.getElementById("analises-lista");
+    if(!listaAn.children.length) {
+      listaAn.innerHTML = '<p style="font-size:13px;color:var(--text-ter)">Nenhuma análise ainda. Use o app SmartGrow Vision.</p>';
+      document.getElementById("analises-count").textContent = "0 análises";
+    }
 
-function preencherFormularios(){
-  // Sheets pode sobrescrever dados do localStorage — só aplica se não temos dados locais
-  if(dadosCicloP1) preencherFormulario(1);
-  if(dadosCicloP2) preencherFormulario(2);
-}
+    atualizarPlanta(0, 0);
+    atualizarPlanta(1, 0);
+    preencherFormularios();
 
-function salvarDadosPlanta(n){
-  const p = n===1 ? "p1" : "p2";
-  const dados = {
-    germinacao: document.getElementById(p+"-germ").value,
-    vaso1:      document.getElementById(p+"-vaso1").value,
-    altura:     document.getElementById(p+"-altura").value,
-    smartgrow:  document.getElementById(p+"-smartgrow").value,
-  };
-  if(n===1) dadosCicloP1=dados; else dadosCicloP2=dados;
-  atualizarPlanta(n-1, 0);
-  document.getElementById("form-p"+n).style.display="none";
-  const payload={tipo:"dados_ciclo",fasePlanta:"germinacao"};
-  payload[p]=dados;
-  fetch(GAS_URL,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)})
-    .then(()=>{ mostrarToastDash("Dados da Planta "+n+" salvos!"); })
-    .catch(()=>{});
-}
-
-function mostrarToastDash(msg){
-  const st=document.getElementById("sg-status");
-  const prev=st.textContent;
-  st.textContent=msg; st.className="badge badge-live";
-  setTimeout(()=>{ st.textContent=prev; },2500);
-}
-
-function toggleForm(n){
-  const f=document.getElementById("form-p"+n);
-  const aberto=f.style.display!=="none";
-  f.style.display=aberto?"none":"block";
-  if(!aberto) preencherFormulario(n);
-}
-
-function preencherFormulario(n){
-  const dados=n===1?dadosCicloP1:dadosCicloP2;
-  const p=n===1?"p1":"p2";
-  if(!dados) return;
-  if(dados.germinacao) document.getElementById(p+"-germ").value     =dados.germinacao;
-  if(dados.vaso1)      document.getElementById(p+"-vaso1").value    =dados.vaso1;
-  if(dados.altura)     document.getElementById(p+"-altura").value   =dados.altura;
-  if(dados.smartgrow)  document.getElementById(p+"-smartgrow").value=dados.smartgrow;
-}
-
-function preencherFormularios(){
-  // Sheets pode sobrescrever dados do localStorage — só aplica se não temos dados locais
-  if(dadosCicloP1) preencherFormulario(1);
-  if(dadosCicloP2) preencherFormulario(2);
-}
-
-function salvarDadosPlanta(n){
-  const p=n===1?"p1":"p2";
-  const dados={
-    germinacao:document.getElementById(p+"-germ").value,
-    vaso1:     document.getElementById(p+"-vaso1").value,
-    altura:    document.getElementById(p+"-altura").value,
-    smartgrow: document.getElementById(p+"-smartgrow").value,
-  };
-  if(n===1) dadosCicloP1=dados; else dadosCicloP2=dados;
-  atualizarPlanta(n-1,0);
-  document.getElementById("form-p"+n).style.display="none";
-  const payload={tipo:"dados_ciclo",fasePlanta:"germinacao"};
-  payload[p]=dados;
-  // Salva no localStorage imediatamente (persiste entre reloads)
-  localStorage.setItem("sg_ciclo_p"+n, JSON.stringify(dados));
-  mostrarToast("Dados salvos! ✓");
-
-  // Tenta enviar ao GAS em background (não bloqueia)
-  fetch(GAS_URL,{method:"POST",headers:{"Content-Type":"text/plain"},body:JSON.stringify(payload)})
-    .catch(()=>{}); // ignora erros de CORS silenciosamente
-}
-
-function mostrarToast(msg){
-  // toast simples no topo
-  let t=document.getElementById("sg-toast");
-  if(!t){t=document.createElement("div");t.id="sg-toast";t.style.cssText="position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#1a1a18;color:#fff;padding:8px 18px;border-radius:20px;font-size:12px;z-index:999;transition:opacity .3s";document.body.appendChild(t);}
-  t.textContent=msg;t.style.opacity="1";
-  setTimeout(()=>t.style.opacity="0",2500);
-}
-
-function salvarDadosCiclo(){
-  dadosCicloP1={germinacao:document.getElementById("p1-germ").value,vaso1:document.getElementById("p1-vaso1").value,altura:document.getElementById("p1-altura").value,smartgrow:document.getElementById("p1-smartgrow").value};
-  dadosCicloP2={germinacao:document.getElementById("p2-germ").value,vaso1:document.getElementById("p2-vaso1").value,altura:document.getElementById("p2-altura").value,smartgrow:document.getElementById("p2-smartgrow").value};
-  atualizarPlanta(0,0); atualizarPlanta(1,0);
-  preencherFormularios();
-  // Carrega análises visuais
-  const analises = rows.filter(r=>{
-    const c=r.c, tipo=String(c[2]&&c[2].v!=null?c[2].v:"");
-    return tipo.startsWith("analise_visual_");
-  }).slice(0,6);
-  const listaEl = document.getElementById("analises-lista");
-  const countEl = document.getElementById("analises-count");
-  if(analises.length){
-    countEl.textContent = analises.length + " análise" + (analises.length>1?"s":"");
-    listaEl.innerHTML = analises.map(r=>{
-      const c=r.c;
-      const hora=String(c[1]&&c[1].v!=null?c[1].v:"").substring(0,5);
-      const tipo=String(c[2]&&c[2].v!=null?c[2].v:"");
-      const num=tipo.includes("P2")?"2":"1";
-      let dados={};
-      try{ dados=JSON.parse(String(c[3]&&c[3].v!=null?c[3].v:"{}")); }catch(e){}
-      const estado=dados.estado||"--";
-      const cores={ótimo:"#4a7c59",bom:"#639922",atenção:"#BA7517",crítico:"#E24B4A"};
-      const cor=cores[estado]||"#888";
-      return `<div class="file-row">
-        <div class="foto-thumb" style="background:var(--green-light);flex-direction:column;gap:2px">
-          <span style="font-size:16px">🌿</span>
-          <span style="font-size:9px;color:var(--green);font-weight:500">P${num}</span>
-        </div>
-        <div style="flex:1;min-width:0">
-          <p class="file-name">${dados.ts||hora} — Planta ${num}</p>
-          <p class="file-meta" style="color:${cor}">${estado.charAt(0).toUpperCase()+estado.slice(1)} · ${dados.fase||"--"} · ${dados.altura?dados.altura+"cm":"--"}</p>
-          <p class="file-meta" style="margin-top:2px">${dados.resumo?dados.resumo.substring(0,80)+"...":""}</p>
+    // Renderiza últimos 8 eventos
+    const icones = {
+      start_ciclo:"🌱", galao_cheio:"💧", toggle_luz:"💡",
+      desequilibrio_hidraulico:"⚠️", dados_ciclo_P1:"🌿", dados_ciclo_P2:"🌿",
+      envio_manual:"📡", analise_visual_P1:"🔬", analise_visual_P2:"🔬"
+    };
+    const itens = rows.slice(0, 8).map(r => {
+      const c    = r.c;
+      const hora = String(c[1]&&c[1].f ? c[1].f : c[1]&&c[1].v ? c[1].v : "").substring(0,5);
+      const tipo = String(c[2]&&c[2].v!=null ? c[2].v : "");
+      const desc = String(c[3]&&c[3].v!=null ? c[3].v : "");
+      return `<div class="evento-row">
+        <span class="evento-hora">${hora}</span>
+        <div>
+          <p class="evento-tipo">${icones[tipo]||"•"} ${tipo}</p>
+          <p class="evento-desc">${desc.length>80 ? desc.substring(0,80)+"..." : desc}</p>
         </div>
       </div>`;
     }).join("");
-  } else {
-    countEl.textContent = "0 análises";
-    listaEl.innerHTML = '<p style="font-size:13px;color:var(--text-ter)">Nenhuma análise ainda. Use o app SmartGrow Vision.</p>';
-  }
-  fetch(GAS_URL,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({tipo:"dados_ciclo",fasePlanta:"germinacao",p1:dadosCicloP1,p2:dadosCicloP2})}).catch(()=>{});
-  fecharModal();
+    document.getElementById("eventos-list").innerHTML =
+      itens || '<p style="font-size:13px;color:var(--text-ter)">Nenhum evento registrado.</p>';
+  }).catch(() => {});
 }
 
-// ── EVENTOS ───────────────────────────────────────
-function carregarEventos(){
-  fetch(EVTS_URL).then(r=>r.text()).then(txt=>{
-    const json=JSON.parse(txt.replace(/^[^(]+\(|\);?$/g,""));
-    const rows=(json.table.rows||[]).filter(r=>r.c&&r.c[0]&&r.c[0].v);
-    for(const r of rows){
-      const c=r.c, tipo=String(c[2]&&c[2].v!=null?c[2].v:""), desc=String(c[3]&&c[3].v!=null?c[3].v:"");
-      if(tipo==="dados_ciclo_P1"&&!dadosCicloP1){try{dadosCicloP1=JSON.parse(desc);localStorage.setItem("sg_ciclo_p1",desc);}catch(e){}}
-      if(tipo==="dados_ciclo_P2"&&!dadosCicloP2){try{dadosCicloP2=JSON.parse(desc);localStorage.setItem("sg_ciclo_p2",desc);}catch(e){}}
-      if(tipo==="start_ciclo"&&!cicloModalAberto){
-        // Usa o ciclo_id (timestamp UNIX em segundos) para verificar se é recente
-        // Formato da descrição: "ciclo_id:1777073529"
-        const descRaw=String(c[3]&&c[3].v!=null?c[3].v:"");
-        const match=descRaw.match(/ciclo_id:(\d+)/);
-        if(match){
-          const cicloTs=parseInt(match[1])*1000; // converte para ms
-          const agoraMs=Date.now();
-          // Abre modal se o ciclo foi iniciado nas últimas 4 horas
-          if(agoraMs-cicloTs < 4*3600*1000 && !dadosCicloP1){
-            const cid = match[1];
-            setTimeout(()=>abrirModal(cid),800);
-          }
-        }
-      }
-    }
-    atualizarPlanta(0,0); atualizarPlanta(1,0);
-    const icones={start_ciclo:"🌱",galao_cheio:"💧",toggle_luz:"💡",desequilibrio_hidraulico:"⚠️",dados_ciclo_P1:"🌿",dados_ciclo_P2:"🌿"};
-    const itens=rows.slice(0,8).map(r=>{
-      const c=r.c;
-      // Hora: vem como string "HH:MM:SS" do Apps Script
-      let hora="";
-      if(c[1]&&c[1].v!=null){
-        hora=String(c[1].v).substring(0,5); // pega só HH:MM
-      }
-      const tipo=String(c[2]&&c[2].v!=null?c[2].v:""),desc=String(c[3]&&c[3].v!=null?c[3].v:"");
-      return `<div class="evento-row"><span class="evento-hora">${hora}</span><div><p class="evento-tipo">${icones[tipo]||"•"} ${tipo}</p><p class="evento-desc">${desc.length>80?desc.substring(0,80)+"...":desc}</p></div></div>`;
-    }).join("");
-    document.getElementById("eventos-list").innerHTML=itens||'<p style="font-size:13px;color:var(--text-ter)">Nenhum evento registrado.</p>';
-  }).catch(()=>{});
-}
+// ── DADOS PRINCIPAIS ─────────────────────────────────────────
+function carregarDados() {
+  const st = document.getElementById("sg-status");
+  st.textContent = "Carregando..."; st.className = "badge badge-load";
+  document.getElementById("sg-error").innerHTML    = "";
+  document.getElementById("sg-warn").innerHTML     = "";
+  document.getElementById("sg-alerta-ia").innerHTML= "";
+  // Limpa análises visuais para recarregar
+  document.getElementById("analises-lista").innerHTML =
+    '<p style="font-size:13px;color:var(--text-ter)">Carregando análises...</p>';
+  document.getElementById("analises-count").textContent = "";
 
-// ── DADOS PRINCIPAIS ──────────────────────────────
-function carregarDados(){
-  const st=document.getElementById("sg-status");
-  st.textContent="Carregando..."; st.className="badge badge-load";
-  document.getElementById("sg-error").innerHTML="";
-  document.getElementById("sg-warn").innerHTML="";
-  document.getElementById("sg-alerta-ia").innerHTML="";
+  fetch(DADOS_URL).then(r => r.text()).then(txt => {
+    const json = JSON.parse(txt.replace(/^[^(]+\(|\);?$/g, ""));
+    const rows = (json.table.rows || []).filter(r => r.c && r.c[0] && r.c[0].v);
 
-  fetch(DADOS_URL).then(r=>r.text()).then(txt=>{
-    const json=JSON.parse(txt.replace(/^[^(]+\(|\);?$/g,""));
-    const rows=(json.table.rows||[]).filter(r=>r.c&&r.c[0]&&r.c[0].v);
-    // Índices das 17 colunas da aba DADOS:
-    // 0:Timestamp 1:Hora 2:U1 3:U2 4:Média 5:Dif 6:Desequil 7:Boia
-    // 8:Vol/Vaso 9:VolTotal 10:Galão 11:Fase 12:DiasCiclo 13:Luz
-    // 14:FatorRega 15:DiagIA 16:Motivo 17:AlertaLP
-    const sv=(c,i,df="")=>{if(!c[i]||c[i].v==null)return df;return String(c[i].v);};
-    const nv=(c,i,df=0)=>{if(!c[i]||c[i].v==null)return df;return parseFloat(c[i].v)||df;};
-    // Hora: pode vir como "HH:MM:SS" string, fração decimal ou Date(...)
-    // c[1].f já vem como "HH:MM:SS" do Sheets — usa direto
-    const parseHora=(c,i)=>{
+    // Helpers de leitura de células do gviz
+    const sv = (c,i,df="") => c[i]&&c[i].v!=null ? String(c[i].v) : df;
+    const nv = (c,i,df=0)  => c[i]&&c[i].v!=null ? parseFloat(c[i].v)||df : df;
+    const parseHora = (c,i) => {
       if(!c[i]) return "--";
-      const f=String(c[i].f||"");
-      if(f&&f.includes(":")) return f.substring(0,5);
-      // Fallback: parseia Date(1899,11,30,h,m,s) do .v
-      const v=String(c[i].v||"");
-      const m=v.match(/Date\(\d+,\d+,\d+,(\d+),(\d+)/);
+      const f = String(c[i].f||"");
+      if(f && f.includes(":")) return f.substring(0,5);
+      const v = String(c[i].v||"");
+      const m = v.match(/Date\(\d+,\d+,\d+,(\d+),(\d+)/);
       if(m) return String(m[1]).padStart(2,"0")+":"+String(m[2]).padStart(2,"0");
       return "--";
     };
-    const dados=rows.map(r=>{
-      const c=r.c;
-      return{
-        ts: (()=>{
-          // c[0].f = "4/25/2026" (data), c[1].f = "12:24:35" (hora)
-          // Usa a hora de c[1] para o label do gráfico
-          const hcel=c[1];
-          if(!hcel) return "--";
-          const hf=String(hcel.f||"");
-          if(hf&&hf.includes(":")) return hf.substring(0,5); // "12:24"
-          // Fallback: parseia Date(1899,11,30,h,m,s)
-          const hv=String(hcel.v||"");
-          const m=hv.match(/Date\(\d+,\d+,\d+,(\d+),(\d+)/);
-          if(m) return String(m[1]).padStart(2,"0")+":"+String(m[2]).padStart(2,"0");
-          return "--";
-        })(),
-        hora:     parseHora(c,1),
+
+    const dados = rows.map(r => {
+      const c = r.c;
+      // Label do gráfico: usa hora formatada da coluna B
+      const ts = parseHora(c,1); // label do gráfico = hora HH:MM
+
+      return {
+        ts,
+        hora: ts,
         u1:       nv(c,2), u2:nv(c,3), media:nv(c,4), dif:nv(c,5),
         desequil: sv(c,6,"NAO"),
         boia:     nv(c,7),
@@ -1107,90 +849,324 @@ function carregarDados(){
         motivo:   sv(c,16),
         alerta:   sv(c,17),
       };
-    }).filter(d=>{
-      const g=d.diag;
+    }).filter(d => {
+      const g = d.diag;
       return g && !g.startsWith("Erro") && !g.startsWith("Rate") && !g.startsWith("?");
     });
 
     if(!dados.length) throw new Error("Nenhum dado válido ainda. Aguarde o próximo ciclo do ESP32.");
-    todosOsDados=dados;
-    const d=dados[0], fi=fatorInfo(d.fator);
+    todosOsDados = dados;
+    const d  = dados[0];
+    const fi = fatorInfo(d.fator);
 
-    st.textContent="Ao vivo"; st.className="badge badge-live";
+    st.textContent = "Ao vivo"; st.className = "badge badge-live";
 
-    if(d.desequil==="SIM")
-      document.getElementById("sg-warn").innerHTML=`<div class="card-warn"><div class="warn-dot"></div><span style="font-size:13px">Desequilíbrio hidráulico — diferença de ${d.dif}% entre os vasos. Verifique o sistema de irrigação.</span></div>`;
+    // Alertas
+    if(d.desequil === "SIM")
+      document.getElementById("sg-warn").innerHTML =
+        `<div class="card-warn"><div class="warn-dot"></div><span style="font-size:13px">Desequilíbrio hidráulico — diferença de ${d.dif}% entre os vasos. Verifique o sistema de irrigação.</span></div>`;
     if(d.alerta)
-      document.getElementById("sg-alerta-ia").innerHTML=`<div class="card-warn"><div class="warn-dot"></div><span style="font-size:13px"><strong>IA:</strong> ${d.alerta}</span></div>`;
+      document.getElementById("sg-alerta-ia").innerHTML =
+        `<div class="card-warn"><div class="warn-dot"></div><span style="font-size:13px"><strong>IA:</strong> ${d.alerta}</span></div>`;
 
-    document.getElementById("diag-text").textContent=d.diag;
-    document.getElementById("diag-ts").textContent=`Última leitura · ${d.hora||d.ts}`;
-    if(d.motivo){document.getElementById("sec-motivo").classList.remove("hidden");document.getElementById("motivo-text").textContent=d.motivo;}
+    // Diagnóstico
+    document.getElementById("diag-text").textContent = d.diag;
+    document.getElementById("diag-ts").textContent   = `Última leitura · ${d.hora||d.ts}`;
+    if(d.motivo) {
+      document.getElementById("sec-motivo").classList.remove("hidden");
+      document.getElementById("motivo-text").textContent = d.motivo;
+    }
 
-    document.getElementById("fator-num").textContent=d.fator.toFixed(1);
-    document.getElementById("fator-num").style.color=fi.cor;
-    document.getElementById("fator-bar").style.width=Math.min((d.fator/2)*100,100)+"%";
-    document.getElementById("fator-bar").style.background=fi.cor;
-    document.getElementById("fator-desc").textContent=fi.label;
+    // Fator de rega
+    document.getElementById("fator-num").textContent        = d.fator.toFixed(1);
+    document.getElementById("fator-num").style.color        = fi.cor;
+    document.getElementById("fator-bar").style.width        = Math.min((d.fator/2)*100,100)+"%";
+    document.getElementById("fator-bar").style.background   = fi.cor;
+    document.getElementById("fator-desc").textContent       = fi.label;
 
-    document.getElementById("m-u1").innerHTML=d.u1+'<span class="metric-unit">%</span>';
-    document.getElementById("m-u2").innerHTML=d.u2+'<span class="metric-unit">%</span>';
-    document.getElementById("m-med").innerHTML=d.media.toFixed(1)+'<span class="metric-unit">%</span>';
-    document.getElementById("m-vbase").innerHTML=d.vbase+'<span class="metric-unit">mL</span>';
-    document.getElementById("m-vtotal").innerHTML=d.vtotal+'<span class="metric-unit">mL</span>';
+    // Sensores
+    document.getElementById("m-u1").innerHTML    = d.u1+'<span class="metric-unit">%</span>';
+    document.getElementById("m-u2").innerHTML    = d.u2+'<span class="metric-unit">%</span>';
+    document.getElementById("m-med").innerHTML   = d.media.toFixed(1)+'<span class="metric-unit">%</span>';
+    document.getElementById("m-vbase").innerHTML = d.vbase+'<span class="metric-unit">mL</span>';
+    document.getElementById("m-vtotal").innerHTML= d.vtotal+'<span class="metric-unit">mL</span>';
 
     atualizarLuz(d.fase, d.luzOn);
     atualizarPlanta(0, d.diasCiclo);
     atualizarPlanta(1, d.diasCiclo);
 
-    const ok=d.boia===0;
-    document.getElementById("boia-dot").className="dot "+(ok?"dot-ok":"dot-alert");
-    document.getElementById("boia-label").textContent=ok?"Nível adequado":"ALERTA: Nível baixo";
-    document.getElementById("boia-ts").textContent=`Atualizado: ${d.hora||d.ts}`;
+    // Boia
+    const ok = d.boia === 0;
+    document.getElementById("boia-dot").className    = "dot " + (ok ? "dot-ok" : "dot-alert");
+    document.getElementById("boia-label").textContent = ok ? "Nível adequado" : "ALERTA: Nível baixo";
+    document.getElementById("boia-ts").textContent    = `Atualizado: ${d.hora||d.ts}`;
 
     atualizarReservatorio(d.galaoMl, d.vbase, d.vtotal);
     renderChart(dados);
     carregarEventos();
-  }).catch(err=>{
-    st.textContent="Erro"; st.className="badge badge-err";
-    document.getElementById("sg-error").innerHTML=`<div class="err-box">Não foi possível carregar: ${err.message}</div>`;
+
+  }).catch(err => {
+    st.textContent = "Erro"; st.className = "badge badge-err";
+    document.getElementById("sg-error").innerHTML =
+      `<div class="err-box">Não foi possível carregar: ${err.message}</div>`;
+    carregarEventos(); // tenta carregar eventos mesmo se dados falharam
   });
 }
 
-// Carrega dados de ciclo do localStorage imediatamente (sem esperar Sheets)
-(function(){
-  try{
-    const s1=localStorage.getItem("sg_ciclo_p1");
-    const s2=localStorage.getItem("sg_ciclo_p2");
-    if(s1){ dadosCicloP1=JSON.parse(s1); atualizarPlanta(0,0); preencherFormulario(1); }
-    if(s2){ dadosCicloP2=JSON.parse(s2); atualizarPlanta(1,0); preencherFormulario(2); }
-  }catch(e){}
-})();
-
-carregarDados();
-
-// Carrega histórico de ciclos anteriores
+// ── HISTÓRICO DE CICLOS ──────────────────────────────────────
 carregarHistorico().then(historico => {
-  if (!historico || !historico.length) return;
+  if(!historico || !historico.length) return;
   document.getElementById("sec-historico").style.display = "block";
-  const faseNomes = {germinacao:"Germinação",vegetacao:"Vegetação",floracao:"Floração"};
   const html = historico.slice().reverse().map(c => `
     <div style="padding:12px 0;border-bottom:1px solid var(--border)">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
         <span style="font-size:13px;font-weight:500">Planta ${c.planta} — ${c.dataColheita}</span>
-        <span style="font-size:11px;color:var(--text-ter)">${c.totalDias} dias de vida · ${(c.totalAguaML/1000).toFixed(1)}L consumidos</span>
+        <span style="font-size:11px;color:var(--text-ter)">${c.totalDias} dias · ${(c.totalAguaML/1000).toFixed(1)}L</span>
       </div>
-      <div style="display:flex;gap:16px;font-size:11px;color:var(--text-sec)">
+      <div style="display:flex;gap:16px;font-size:11px;color:var(--text-sec);flex-wrap:wrap">
         <span>Entrada: ${c.alturaEntrada||"--"}cm</span>
-        <span>No SmartGrow: ${c.diasSmartGrow} dias</span>
-        <span>Umidade média: ${c.mediaUmidade}%</span>
-        <span>Leituras: ${c.totalLeituras}</span>
+        <span>SmartGrow: ${c.diasSmartGrow} dias</span>
+        <span>Umid. média: ${c.mediaUmidade}%</span>
+        <span>${c.totalLeituras} leituras</span>
+      </div>
+    </div>`).join("");
+  document.getElementById("historico-list").innerHTML =
+    html || '<p style="font-size:13px;color:var(--text-ter)">Nenhum ciclo encerrado ainda.</p>';
+});
+
+// ── INIT ─────────────────────────────────────────────────────
+// Preenche formulários com dados do localStorage antes do primeiro fetch
+preencherFormularios();
+carregarDados();
+</script>
+
+
+</head>
+<body>
+
+
+<header class="header">
+  <div class="h-logo">
+    <svg width="26" height="26" viewBox="0 0 26 26" fill="none"><circle cx="13" cy="13" r="12.5" stroke="#4a7c59" stroke-opacity=".4"/><path d="M13 21C13 21 7.5 16.5 7.5 11.5C7.5 8.46 10.01 6 13 6C15.99 6 18.5 8.46 18.5 11.5C18.5 16.5 13 21 13 21Z" fill="#4a7c59" opacity=".15" stroke="#4a7c59" stroke-width="1"/><line x1="13" y1="21" x2="13" y2="11" stroke="#4a7c59" stroke-width="1" stroke-dasharray="1.5 1.5"/><circle cx="13" cy="11" r="1.5" fill="#4a7c59"/></svg>
+    <div><p class="h-title">SmartGrow</p><p class="h-sub">Monitor de Cultivo</p></div>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px">
+    <span class="badge badge-load" id="sg-status">Carregando...</span>
+    <button class="btn" onclick="carregarDados()">Atualizar</button>
+  </div>
+</header>
+
+<main class="main">
+  <div id="sg-error"></div>
+  <div id="sg-warn"></div>
+  <div id="sg-alerta-ia"></div>
+
+  <div class="top-grid">
+    <div class="card-surf">
+      <p class="lbl">Autonomia</p>
+      <p class="aut-num" id="aut-num">--</p>
+      <p class="aut-unit">dias restantes</p>
+      <div class="bar-bg"><div class="bar-fill" id="aut-bar" style="width:0%"></div></div>
+      <p class="aut-meta" id="aut-meta">Calculando...</p>
+      <button class="btn-link" onclick="resetGalao()">Galão reabastecido (7L) →</button>
+    </div>
+    <div class="card" style="display:flex;flex-direction:column">
+      <p class="lbl">Diagnóstico IA</p>
+      <p style="font-size:14px;font-weight:500;margin:0 0 auto;line-height:1.4" id="diag-text">Carregando...</p>
+      <p style="font-size:11px;color:var(--text-ter);margin:8px 0 0" id="diag-ts">—</p>
+    </div>
+  </div>
+
+  <div class="sec hidden" id="sec-motivo">
+    <div class="card" style="padding:12px 16px">
+      <p class="lbl" style="margin-bottom:4px">Motivo da decisão da IA</p>
+      <p style="font-size:12px;color:var(--text-sec);line-height:1.5" id="motivo-text">—</p>
+    </div>
+  </div>
+
+  <div class="sec">
+    <p class="lbl">Fator de Rega</p>
+    <div class="card">
+      <div class="fator-card">
+        <p class="fator-num" id="fator-num">--</p>
+        <div style="flex:1">
+          <div class="fator-bar-bg"><div class="fator-bar-fill" id="fator-bar" style="width:0%"></div></div>
+          <div class="fator-scale"><span>0.0</span><span>0.5</span><span>1.0</span><span>1.5</span><span>2.0</span></div>
+          <p class="fator-desc" id="fator-desc">—</p>
+        </div>
       </div>
     </div>
-  `).join("");
-  document.getElementById("historico-list").innerHTML = html ||
-    '<p style="font-size:13px;color:var(--text-ter)">Nenhum ciclo encerrado ainda.</p>';
-});
-</script>
+  </div>
+
+  <div class="sec">
+    <p class="lbl">Sensores — deslize para ver mais</p>
+    <div class="metrics">
+      <div class="metric"><p class="metric-lbl">Vaso 1</p><p class="metric-val" id="m-u1">--<span class="metric-unit">%</span></p></div>
+      <div class="metric"><p class="metric-lbl">Vaso 2</p><p class="metric-val" id="m-u2">--<span class="metric-unit">%</span></p></div>
+      <div class="metric"><p class="metric-lbl">Média</p><p class="metric-val" id="m-med">--<span class="metric-unit">%</span></p></div>
+      <div class="metric"><p class="metric-lbl">Vol/vaso</p><p class="metric-val" id="m-vbase">--<span class="metric-unit">mL</span></p></div>
+      <div class="metric"><p class="metric-lbl">Vol total</p><p class="metric-val" id="m-vtotal">--<span class="metric-unit">mL</span></p></div>
+      <div class="metric metric-soon"><p class="metric-lbl">Temperatura</p><p class="metric-val" style="font-size:13px;color:var(--text-ter)">em breve</p></div>
+      <div class="metric metric-soon"><p class="metric-lbl">VPD</p><p class="metric-val" style="font-size:13px;color:var(--text-ter)">em breve</p></div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <p class="lbl">Iluminação</p>
+    <div class="card">
+      <div class="luz-grid">
+        <div class="luz-item">
+          <p class="metric-lbl">Status atual</p>
+          <p class="luz-val" id="luz-status">--</p>
+          <span style="font-size:10px;padding:2px 8px;border-radius:20px;display:inline-block;margin-top:6px" id="luz-badge">--</span>
+        </div>
+        <div class="luz-item">
+          <p class="metric-lbl">Fase / horário</p>
+          <p class="luz-val" id="luz-fase">--</p>
+          <p style="font-size:11px;color:var(--text-sec);margin-top:4px" id="luz-horario">--</p>
+        </div>
+        <div class="luz-item">
+          <p class="metric-lbl">Ciclo</p>
+          <p class="luz-val" id="luz-ciclo">--</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <p class="lbl">Plantas</p>
+    <div class="plantas-grid">
+      <div class="card">
+        <p class="planta-nome">Planta 1 — Vaso 1</p>
+        <p class="planta-dias" id="dias-p1">Ciclo não iniciado</p>
+        <div class="fase-pills" id="fase-p1">
+          <button class="pill" onclick="setFase(0,'Germinação')">Germinação</button>
+          <button class="pill ativa" onclick="setFase(0,'Vegetação')">Vegetação</button>
+          <button class="pill" onclick="setFase(0,'Floração')">Floração</button>
+        </div>
+        <p class="planta-info" id="info-p1">Fase atual: <strong>Vegetação</strong></p>
+        <div class="ciclo-info" id="ciclo-p1"></div>
+        <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">
+          <button class="btn-colheita" style="color:var(--blue);border-color:var(--blue)" onclick="toggleForm(1)">Inserir dados →</button>
+          <button class="btn-colheita" onclick="colherPlanta(1)">Registrar colheita →</button>
+        </div>
+        <div id="form-p1" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
+          <div class="form-row"><label class="form-label">Germinação</label><input class="form-input" type="date" id="p1-germ"></div>
+          <div class="form-row"><label class="form-label">Primeiro vaso (potinho)</label><input class="form-input" type="date" id="p1-vaso1"></div>
+          <div class="form-row"><label class="form-label">Altura ao entrar no SmartGrow (cm)</label><input class="form-input" type="number" id="p1-altura" placeholder="ex: 18" min="0" max="200"></div>
+          <div class="form-row"><label class="form-label">Entrada no SmartGrow (vaso 11L)</label><input class="form-input" type="date" id="p1-smartgrow"></div>
+          <button class="btn-primary" style="margin-top:8px;width:100%" onclick="salvarDadosPlanta(1)">Salvar</button>
+        </div>
+      </div>
+      <div class="card">
+        <p class="planta-nome">Planta 2 — Vaso 2</p>
+        <p class="planta-dias" id="dias-p2">Ciclo não iniciado</p>
+        <div class="fase-pills" id="fase-p2">
+          <button class="pill" onclick="setFase(1,'Germinação')">Germinação</button>
+          <button class="pill ativa" onclick="setFase(1,'Vegetação')">Vegetação</button>
+          <button class="pill" onclick="setFase(1,'Floração')">Floração</button>
+        </div>
+        <p class="planta-info" id="info-p2">Fase atual: <strong>Vegetação</strong></p>
+        <div class="ciclo-info" id="ciclo-p2"></div>
+        <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">
+          <button class="btn-colheita" style="color:var(--blue);border-color:var(--blue)" onclick="toggleForm(2)">Inserir dados →</button>
+          <button class="btn-colheita" onclick="colherPlanta(2)">Registrar colheita →</button>
+        </div>
+        <div id="form-p2" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
+          <div class="form-row"><label class="form-label">Germinação</label><input class="form-input" type="date" id="p2-germ"></div>
+          <div class="form-row"><label class="form-label">Primeiro vaso (potinho)</label><input class="form-input" type="date" id="p2-vaso1"></div>
+          <div class="form-row"><label class="form-label">Altura ao entrar no SmartGrow (cm)</label><input class="form-input" type="number" id="p2-altura" placeholder="ex: 16" min="0" max="200"></div>
+          <div class="form-row"><label class="form-label">Entrada no SmartGrow (vaso 11L)</label><input class="form-input" type="date" id="p2-smartgrow"></div>
+          <button class="btn-primary" style="margin-top:8px;width:100%" onclick="salvarDadosPlanta(2)">Salvar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="card">
+      <div class="chart-header">
+        <div class="legend">
+          <span><span class="ldot" style="background:#378ADD"></span>Vaso 1</span>
+          <span><span class="ldot" style="background:#639922"></span>Vaso 2</span>
+          <span><span class="ldot" style="background:#888780"></span>Média</span>
+        </div>
+        <div class="jbtns">
+          <button class="jbtn ativo" onclick="setJanela(this,96)">Hoje</button>
+          <button class="jbtn" onclick="setJanela(this,672)">7d</button>
+          <button class="jbtn" onclick="setJanela(this,1344)">14d</button>
+          <button class="jbtn" onclick="setJanela(this,9999)">Tudo</button>
+        </div>
+      </div>
+      <div style="position:relative;height:220px">
+        <canvas id="sg-chart" role="img" aria-label="Histórico de umidade dos dois vasos">Histórico de umidade.</canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <p class="lbl">Reservatório</p>
+    <div class="card">
+      <div class="reserv-grid">
+        <div>
+          <p class="reserv-val" id="res-litros">--L</p>
+          <p class="reserv-lbl">volume atual</p>
+          <p class="reserv-val" style="margin-top:10px" id="res-dias">--</p>
+          <p class="reserv-lbl">dias de autonomia</p>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+          <div class="pct-wrap">
+            <svg width="80" height="80" viewBox="0 0 80 80">
+              <circle cx="40" cy="40" r="33" fill="none" stroke="#ebebeb" stroke-width="5"/>
+              <circle cx="40" cy="40" r="33" fill="none" stroke="#639922" stroke-width="5" stroke-dasharray="207.3" id="res-arc" stroke-dashoffset="52" stroke-linecap="round" transform="rotate(-90 40 40)"/>
+            </svg>
+            <span class="pct-label" id="res-pct">--</span>
+          </div>
+          <p style="font-size:11px;color:var(--text-ter)">de 7L</p>
+        </div>
+        <div style="text-align:right">
+          <p class="reserv-val" id="res-vaso">--mL</p>
+          <p class="reserv-lbl">por vaso / rega</p>
+          <p class="reserv-val" style="margin-top:8px" id="res-total">--mL</p>
+          <p class="reserv-lbl">total sistema (×2)</p>
+          <button class="btn-link" style="text-align:right;margin-top:10px" onclick="resetGalao()">Galão reabastecido →</button>
+        </div>
+      </div>
+      <div class="reserv-bottom">
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="dot dot-ok" id="boia-dot"></div>
+          <span style="font-size:13px" id="boia-label">—</span>
+        </div>
+        <span style="font-size:11px;color:var(--text-ter)" id="boia-ts">—</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <p class="lbl">Análises Visuais</p>
+    <div class="card" id="analises-visuais">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <p class="drive-title">Relatórios por foto</p>
+        <span style="font-size:11px;color:var(--text-ter)" id="analises-count">Carregando...</span>
+      </div>
+      <div id="analises-lista"></div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <p class="lbl">Últimos Eventos</p>
+    <div class="card" id="eventos-list">
+      <p style="font-size:13px;color:var(--text-ter)">Carregando eventos...</p>
+    </div>
+  </div>
+
+  <div class="sec" id="sec-historico" style="display:none">
+    <p class="lbl">Histórico de Ciclos</p>
+    <div class="card" id="historico-list">
+      <p style="font-size:13px;color:var(--text-ter)">Carregando histórico...</p>
+    </div>
+  </div>
+</main>
+
 </body>
 </html>
