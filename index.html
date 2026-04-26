@@ -399,17 +399,22 @@ function atualizarReservatorio(galaoMlSheets, vbase, vtotal) {
   const litros = (galaoAtual / 1000).toFixed(1);
   // vtotal = volume real bombeado por rega (dois vasos juntos)
   // vbase  = por vaso. Se nunca regou, estima conservadoramente
-  // vtotal = volume real bombeado na última rega (ambos os vasos)
-  // Se vtotal=0 nunca regou — não usar estimativa, mostrar "--"
-  const semDado  = vtotal === 0;
-  const dias     = semDado ? null : Math.floor(galaoAtual / vtotal);
+  // Autonomia: galão ÷ consumo estimado por rega
+  // Prioridade: 1) vtotal real medido, 2) vbase×2 recomendado pela IA, 3) 300mL fallback
+  // consumoPorRega = volume total saindo do galão por rega (dois vasos)
+  // vtotal já é o total. vbase é por vaso (×2). Fallback 600mL (300×2)
+  const consumoPorRega = vtotal > 0 ? vtotal
+                       : vbase > 0  ? vbase * 2
+                       :              600; // 300mL/vaso × 2 vasos
+  const dias = Math.floor(galaoAtual / consumoPorRega);
+  const semDado = vtotal === 0; // para texto informativo
 
   const C = 2 * Math.PI * 33;
   const offset = C * (1 - pct / 100);
   const cor = pct <= 20 ? "#E24B4A" : pct <= 40 ? "#BA7517" : "#639922";
 
   document.getElementById("res-litros").textContent = litros + "L";
-  document.getElementById("res-dias").textContent   = dias !== null ? dias + " dias" : "-- dias";
+  document.getElementById("res-dias").textContent   = dias + " dias";
   document.getElementById("res-pct").textContent    = Math.round(pct) + "%";
   document.getElementById("res-vaso").textContent   = vbase + "mL";
   document.getElementById("res-total").textContent  = vtotal + "mL";
@@ -417,7 +422,7 @@ function atualizarReservatorio(galaoMlSheets, vbase, vtotal) {
   arc.setAttribute("stroke-dasharray", C.toFixed(1));
   arc.setAttribute("stroke-dashoffset", offset.toFixed(1));
   arc.setAttribute("stroke", cor);
-  document.getElementById("aut-num").textContent          = dias !== null ? dias : "--";
+  document.getElementById("aut-num").textContent          = dias;
   document.getElementById("aut-bar").style.width          = pct + "%";
   document.getElementById("aut-bar").style.background     = cor;
   document.getElementById("aut-meta").textContent         = semDado
