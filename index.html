@@ -14,7 +14,7 @@
   .h-logo{display:flex;align-items:center;gap:10px}
   .h-title{font-size:15px;font-weight:500;margin:0}.h-sub{font-size:11px;color:var(--text-sec);margin:0}
   .badge{font-size:11px;padding:3px 10px;border-radius:20px;font-weight:500}
-  .badge-live{background:#e8f5e9;color:#2e7d32}.badge-load{background:#f5f5f5;color:var(--text-sec)}.badge-err{background:#ffebee;color:#c62828}
+  .badge-live{background:#e8f5e9;color:#2e7d32}.badge-load{background:#f5f5f5;color:var(--text-sec)}.badge-err{background:#ffebee;color:#c62828}.badge-offline{background:#fff8e1;color:#f57f17}
   .btn{font-size:12px;font-family:inherit;cursor:pointer;border:1px solid var(--border-strong);background:transparent;color:var(--text-sec);padding:5px 14px;border-radius:20px;transition:background .15s}
   .btn:hover{background:var(--green-light);color:var(--green);border-color:var(--green)}
   .btn-primary{background:var(--green);color:#fff;border:none;font-size:12px;font-family:inherit;cursor:pointer;padding:8px 20px;border-radius:20px}
@@ -102,14 +102,14 @@
   .form-input:focus{border-color:var(--green);box-shadow:0 0 0 2px var(--green-light)}
   .hidden{display:none}
 </style>
+
 </head>
 <body>
-
 
 <header class="header">
   <div class="h-logo">
     <svg width="26" height="26" viewBox="0 0 26 26" fill="none"><circle cx="13" cy="13" r="12.5" stroke="#4a7c59" stroke-opacity=".4"/><path d="M13 21C13 21 7.5 16.5 7.5 11.5C7.5 8.46 10.01 6 13 6C15.99 6 18.5 8.46 18.5 11.5C18.5 16.5 13 21 13 21Z" fill="#4a7c59" opacity=".15" stroke="#4a7c59" stroke-width="1"/><line x1="13" y1="21" x2="13" y2="11" stroke="#4a7c59" stroke-width="1" stroke-dasharray="1.5 1.5"/><circle cx="13" cy="11" r="1.5" fill="#4a7c59"/></svg>
-    <div><p class="h-title">SmartGrow</p><p class="h-sub">Monitor de Cultivo</p></div>
+    <div><p class="h-title">SmartGrow</p><p class="h-sub" id="h-ultima-atualizacao">Monitor de Cultivo</p></div>
   </div>
   <div style="display:flex;align-items:center;gap:8px">
     <span class="badge badge-load" id="sg-status">Carregando...</span>
@@ -117,6 +117,10 @@
   </div>
 </header>
 
+<main class="main">
+  <div id="sg-error"></div>
+  <div id="sg-warn"></div>
+  <div id="sg-alerta-ia"></div>
 <main class="main">
   <div id="sg-error"></div>
   <div id="sg-warn"></div>
@@ -167,8 +171,10 @@
       <div class="metric"><p class="metric-lbl">Média</p><p class="metric-val" id="m-med">--<span class="metric-unit">%</span></p></div>
       <div class="metric"><p class="metric-lbl">Vol/vaso</p><p class="metric-val" id="m-vbase">--<span class="metric-unit">mL</span></p></div>
       <div class="metric"><p class="metric-lbl">Vol total</p><p class="metric-val" id="m-vtotal">--<span class="metric-unit">mL</span></p></div>
-      <div class="metric metric-soon"><p class="metric-lbl">Temperatura</p><p class="metric-val" style="font-size:13px;color:var(--text-ter)">em breve</p></div>
-      <div class="metric metric-soon"><p class="metric-lbl">VPD</p><p class="metric-val" style="font-size:13px;color:var(--text-ter)">em breve</p></div>
+      <div class="metric"><p class="metric-lbl">Temp Ar</p><p class="metric-val" id="m-temp"><span style="color:var(--text-ter);font-size:11px">--</span></p></div>
+      <div class="metric"><p class="metric-lbl">Umid Ar</p><p class="metric-val" id="m-umid-ar"><span style="color:var(--text-ter);font-size:11px">--</span></p></div>
+      <div class="metric"><p class="metric-lbl">VPD</p><p class="metric-val" id="m-vpd"><span style="color:var(--text-ter);font-size:11px">--</span></p></div>
+      <div class="metric"><p class="metric-lbl">Temp Terra</p><p class="metric-val" id="m-temp-terra"><span style="color:var(--text-ter);font-size:11px">--</span></p></div>
     </div>
   </div>
 
@@ -329,6 +335,8 @@
   </div>
 </main>
 
+</main>
+
 <script>
 // ── CONFIG ────────────────────────────────────────────────────
 const SHEET_ID  = "1cK0y2--PLGAo00W_UP4Ix53qcAVyQU9Na-uDlvNjYXo";
@@ -338,7 +346,10 @@ const EVTS_URL  = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tq
 const GALAO_ML  = 7000;
 
 // ── ESTADO GLOBAL ─────────────────────────────────────────────
+const ESP32_TIMEOUT_MIN = 20; // minutos sem dados = ESP32 offline
 let galaoAtual    = 7000;
+let ultimaLeituraTs = null; // Date object da última leitura recebida
+let timerStatusESP32 = null;
 let chartInst     = null;
 let janelaAtual   = 96; // 96 leituras = ~24h (4 leituras/h)
 let todosOsDados  = [];
@@ -857,6 +868,11 @@ function carregarDados() {
         diag:     sv(c,15),
         motivo:   sv(c,16),
         alerta:   sv(c,17),
+        tempAr:   nv(c,18,null),
+        umidAr:   nv(c,19,null),
+        pressao:  nv(c,20,null),
+        vpd:      nv(c,21,null),
+        tempTerra:nv(c,22,null),
       };
     }).filter(d => {
       const g = d.diag;
@@ -869,6 +885,9 @@ function carregarDados() {
     const fi = fatorInfo(d.fator);
 
     st.textContent = "Ao vivo"; st.className = "badge badge-live";
+
+    // Inicia monitoramento de status ESP32
+    iniciarMonitorStatusESP32();
 
     // Alertas
     if(d.desequil === "SIM")
@@ -899,6 +918,14 @@ function carregarDados() {
     document.getElementById("m-med").innerHTML   = d.media.toFixed(1)+'<span class="metric-unit">%</span>';
     document.getElementById("m-vbase").innerHTML = d.vbase+'<span class="metric-unit">mL</span>';
     document.getElementById("m-vtotal").innerHTML= d.vtotal+'<span class="metric-unit">mL</span>';
+    // Novos sensores — mostra "--" se não disponível
+    const fmtS = (v, unit, dec=1) => v!==null && v!==0
+      ? v.toFixed(dec)+'<span class="metric-unit">'+unit+'</span>'
+      : '<span style="color:var(--text-ter);font-size:11px">--</span>';
+    document.getElementById("m-temp").innerHTML      = fmtS(d.tempAr,    "°C");
+    document.getElementById("m-umid-ar").innerHTML   = fmtS(d.umidAr,    "%");
+    document.getElementById("m-vpd").innerHTML       = fmtS(d.vpd,       "kPa", 2);
+    document.getElementById("m-temp-terra").innerHTML= fmtS(d.tempTerra, "°C");
 
     atualizarLuz(d.fase, d.luzOn);
     atualizarPlanta(0, d.diasCiclo);
@@ -915,10 +942,11 @@ function carregarDados() {
     carregarEventos();
 
   }).catch(err => {
-    st.textContent = "Erro"; st.className = "badge badge-err";
+    st.textContent = "Sem dados"; st.className = "badge badge-err";
+    // Mantém dados anteriores visíveis — não limpa a tela
     document.getElementById("sg-error").innerHTML =
-      `<div class="err-box">Não foi possível carregar: ${err.message}</div>`;
-    carregarEventos(); // tenta carregar eventos mesmo se dados falharam
+      `<div class="err-box">⚠️ Não foi possível atualizar os dados. Exibindo última leitura disponível. Erro: ${err.message}</div>`;
+    carregarEventos();
   });
 }
 
@@ -943,239 +971,56 @@ carregarHistorico().then(historico => {
     html || '<p style="font-size:13px;color:var(--text-ter)">Nenhum ciclo encerrado ainda.</p>';
 });
 
+// ── STATUS ESP32 ─────────────────────────────────────────────
+// Monitora se o ESP32 está enviando dados regularmente.
+// Se passar mais de ESP32_TIMEOUT_MIN minutos sem nova leitura,
+// exibe alerta de "Dispositivo offline" no header.
+function iniciarMonitorStatusESP32() {
+  if (timerStatusESP32) clearInterval(timerStatusESP32);
+  ultimaLeituraTs = new Date();
+  atualizarSubtituloConexao();
+  timerStatusESP32 = setInterval(atualizarSubtituloConexao, 60000); // checa a cada 1min
+}
+
+function atualizarSubtituloConexao() {
+  const el = document.getElementById("h-ultima-atualizacao");
+  if (!ultimaLeituraTs) { el.textContent = "Monitor de Cultivo"; return; }
+
+  const agora = new Date();
+  const minAtras = Math.floor((agora - ultimaLeituraTs) / 60000);
+  const st = document.getElementById("sg-status");
+
+  if (minAtras < 2) {
+    el.textContent = "Atualizado agora";
+    el.style.color = "";
+  } else if (minAtras < ESP32_TIMEOUT_MIN) {
+    el.textContent = `Última leitura: ${minAtras} min atrás`;
+    el.style.color = "";
+  } else {
+    // ESP32 offline — mais de 20 min sem dados
+    el.textContent = `⚠️ Sem atualização há ${minAtras} min`;
+    el.style.color = "#f57f17";
+    st.textContent = "Dispositivo offline";
+    st.className   = "badge badge-offline";
+    // Banner de alerta se ainda não exibido
+    const errEl = document.getElementById("sg-error");
+    if (!errEl.innerHTML.includes("offline")) {
+      errEl.innerHTML =
+        `<div class="err-box" style="background:#fff8e1;border-color:#ffe082;color:#795548">
+          ⚠️ O ESP32 está offline ou sem internet há ${minAtras} minutos.<br>
+          Os dados abaixo são da última leitura registrada — o sistema pode estar operando
+          normalmente de forma autônoma (rega e luz continuam funcionando localmente).
+        </div>`;
+    }
+  }
+}
+
 // ── INIT ─────────────────────────────────────────────────────
 // Preenche formulários com dados do localStorage antes do primeiro fetch
 preencherFormularios();
 carregarDados();
+
 </script>
-
-
-</head>
-<body>
-
-
-<header class="header">
-  <div class="h-logo">
-    <svg width="26" height="26" viewBox="0 0 26 26" fill="none"><circle cx="13" cy="13" r="12.5" stroke="#4a7c59" stroke-opacity=".4"/><path d="M13 21C13 21 7.5 16.5 7.5 11.5C7.5 8.46 10.01 6 13 6C15.99 6 18.5 8.46 18.5 11.5C18.5 16.5 13 21 13 21Z" fill="#4a7c59" opacity=".15" stroke="#4a7c59" stroke-width="1"/><line x1="13" y1="21" x2="13" y2="11" stroke="#4a7c59" stroke-width="1" stroke-dasharray="1.5 1.5"/><circle cx="13" cy="11" r="1.5" fill="#4a7c59"/></svg>
-    <div><p class="h-title">SmartGrow</p><p class="h-sub">Monitor de Cultivo</p></div>
-  </div>
-  <div style="display:flex;align-items:center;gap:8px">
-    <span class="badge badge-load" id="sg-status">Carregando...</span>
-    <button class="btn" onclick="carregarDados()">Atualizar</button>
-  </div>
-</header>
-
-<main class="main">
-  <div id="sg-error"></div>
-  <div id="sg-warn"></div>
-  <div id="sg-alerta-ia"></div>
-
-  <div class="top-grid">
-    <div class="card-surf">
-      <p class="lbl">Autonomia</p>
-      <p class="aut-num" id="aut-num">--</p>
-      <p class="aut-unit">dias restantes</p>
-      <div class="bar-bg"><div class="bar-fill" id="aut-bar" style="width:0%"></div></div>
-      <p class="aut-meta" id="aut-meta">Calculando...</p>
-      <button class="btn-link" onclick="resetGalao()">Galão reabastecido (7L) →</button>
-    </div>
-    <div class="card" style="display:flex;flex-direction:column">
-      <p class="lbl">Diagnóstico IA</p>
-      <p style="font-size:14px;font-weight:500;margin:0 0 auto;line-height:1.4" id="diag-text">Carregando...</p>
-      <p style="font-size:11px;color:var(--text-ter);margin:8px 0 0" id="diag-ts">—</p>
-    </div>
-  </div>
-
-  <div class="sec hidden" id="sec-motivo">
-    <div class="card" style="padding:12px 16px">
-      <p class="lbl" style="margin-bottom:4px">Motivo da decisão da IA</p>
-      <p style="font-size:12px;color:var(--text-sec);line-height:1.5" id="motivo-text">—</p>
-    </div>
-  </div>
-
-  <div class="sec">
-    <p class="lbl">Fator de Rega</p>
-    <div class="card">
-      <div class="fator-card">
-        <p class="fator-num" id="fator-num">--</p>
-        <div style="flex:1">
-          <div class="fator-bar-bg"><div class="fator-bar-fill" id="fator-bar" style="width:0%"></div></div>
-          <div class="fator-scale"><span>0.0</span><span>0.5</span><span>1.0</span><span>1.5</span><span>2.0</span></div>
-          <p class="fator-desc" id="fator-desc">—</p>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="sec">
-    <p class="lbl">Sensores — deslize para ver mais</p>
-    <div class="metrics">
-      <div class="metric"><p class="metric-lbl">Vaso 1</p><p class="metric-val" id="m-u1">--<span class="metric-unit">%</span></p></div>
-      <div class="metric"><p class="metric-lbl">Vaso 2</p><p class="metric-val" id="m-u2">--<span class="metric-unit">%</span></p></div>
-      <div class="metric"><p class="metric-lbl">Média</p><p class="metric-val" id="m-med">--<span class="metric-unit">%</span></p></div>
-      <div class="metric"><p class="metric-lbl">Vol/vaso</p><p class="metric-val" id="m-vbase">--<span class="metric-unit">mL</span></p></div>
-      <div class="metric"><p class="metric-lbl">Vol total</p><p class="metric-val" id="m-vtotal">--<span class="metric-unit">mL</span></p></div>
-      <div class="metric metric-soon"><p class="metric-lbl">Temperatura</p><p class="metric-val" style="font-size:13px;color:var(--text-ter)">em breve</p></div>
-      <div class="metric metric-soon"><p class="metric-lbl">VPD</p><p class="metric-val" style="font-size:13px;color:var(--text-ter)">em breve</p></div>
-    </div>
-  </div>
-
-  <div class="sec">
-    <p class="lbl">Iluminação</p>
-    <div class="card">
-      <div class="luz-grid">
-        <div class="luz-item">
-          <p class="metric-lbl">Status atual</p>
-          <p class="luz-val" id="luz-status">--</p>
-          <span style="font-size:10px;padding:2px 8px;border-radius:20px;display:inline-block;margin-top:6px" id="luz-badge">--</span>
-        </div>
-        <div class="luz-item">
-          <p class="metric-lbl">Fase / horário</p>
-          <p class="luz-val" id="luz-fase">--</p>
-          <p style="font-size:11px;color:var(--text-sec);margin-top:4px" id="luz-horario">--</p>
-        </div>
-        <div class="luz-item">
-          <p class="metric-lbl">Ciclo</p>
-          <p class="luz-val" id="luz-ciclo">--</p>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="sec">
-    <p class="lbl">Plantas</p>
-    <div class="plantas-grid">
-      <div class="card">
-        <p class="planta-nome">Planta 1 — Vaso 1</p>
-        <p class="planta-dias" id="dias-p1">Ciclo não iniciado</p>
-        <div class="fase-pills" id="fase-p1">
-          <button class="pill" onclick="setFase(0,'Germinação')">Germinação</button>
-          <button class="pill ativa" onclick="setFase(0,'Vegetação')">Vegetação</button>
-          <button class="pill" onclick="setFase(0,'Floração')">Floração</button>
-        </div>
-        <p class="planta-info" id="info-p1">Fase atual: <strong>Vegetação</strong></p>
-        <div class="ciclo-info" id="ciclo-p1"></div>
-        <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">
-          <button class="btn-colheita" style="color:var(--blue);border-color:var(--blue)" onclick="toggleForm(1)">Inserir dados →</button>
-          <button class="btn-colheita" onclick="colherPlanta(1)">Registrar colheita →</button>
-        </div>
-        <div id="form-p1" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
-          <div class="form-row"><label class="form-label">Germinação</label><input class="form-input" type="date" id="p1-germ"></div>
-          <div class="form-row"><label class="form-label">Primeiro vaso (potinho)</label><input class="form-input" type="date" id="p1-vaso1"></div>
-          <div class="form-row"><label class="form-label">Altura ao entrar no SmartGrow (cm)</label><input class="form-input" type="number" id="p1-altura" placeholder="ex: 18" min="0" max="200"></div>
-          <div class="form-row"><label class="form-label">Entrada no SmartGrow (vaso 11L)</label><input class="form-input" type="date" id="p1-smartgrow"></div>
-          <button class="btn-primary" style="margin-top:8px;width:100%" onclick="salvarDadosPlanta(1)">Salvar</button>
-        </div>
-      </div>
-      <div class="card">
-        <p class="planta-nome">Planta 2 — Vaso 2</p>
-        <p class="planta-dias" id="dias-p2">Ciclo não iniciado</p>
-        <div class="fase-pills" id="fase-p2">
-          <button class="pill" onclick="setFase(1,'Germinação')">Germinação</button>
-          <button class="pill ativa" onclick="setFase(1,'Vegetação')">Vegetação</button>
-          <button class="pill" onclick="setFase(1,'Floração')">Floração</button>
-        </div>
-        <p class="planta-info" id="info-p2">Fase atual: <strong>Vegetação</strong></p>
-        <div class="ciclo-info" id="ciclo-p2"></div>
-        <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">
-          <button class="btn-colheita" style="color:var(--blue);border-color:var(--blue)" onclick="toggleForm(2)">Inserir dados →</button>
-          <button class="btn-colheita" onclick="colherPlanta(2)">Registrar colheita →</button>
-        </div>
-        <div id="form-p2" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
-          <div class="form-row"><label class="form-label">Germinação</label><input class="form-input" type="date" id="p2-germ"></div>
-          <div class="form-row"><label class="form-label">Primeiro vaso (potinho)</label><input class="form-input" type="date" id="p2-vaso1"></div>
-          <div class="form-row"><label class="form-label">Altura ao entrar no SmartGrow (cm)</label><input class="form-input" type="number" id="p2-altura" placeholder="ex: 16" min="0" max="200"></div>
-          <div class="form-row"><label class="form-label">Entrada no SmartGrow (vaso 11L)</label><input class="form-input" type="date" id="p2-smartgrow"></div>
-          <button class="btn-primary" style="margin-top:8px;width:100%" onclick="salvarDadosPlanta(2)">Salvar</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="sec">
-    <div class="card">
-      <div class="chart-header">
-        <div class="legend">
-          <span><span class="ldot" style="background:#378ADD"></span>Vaso 1</span>
-          <span><span class="ldot" style="background:#639922"></span>Vaso 2</span>
-          <span><span class="ldot" style="background:#888780"></span>Média</span>
-        </div>
-        <div class="jbtns">
-          <button class="jbtn ativo" onclick="setJanela(this,96)">Hoje</button>
-          <button class="jbtn" onclick="setJanela(this,672)">7d</button>
-          <button class="jbtn" onclick="setJanela(this,1344)">14d</button>
-          <button class="jbtn" onclick="setJanela(this,9999)">Tudo</button>
-        </div>
-      </div>
-      <div style="position:relative;height:220px">
-        <canvas id="sg-chart" role="img" aria-label="Histórico de umidade dos dois vasos">Histórico de umidade.</canvas>
-      </div>
-    </div>
-  </div>
-
-  <div class="sec">
-    <p class="lbl">Reservatório</p>
-    <div class="card">
-      <div class="reserv-grid">
-        <div>
-          <p class="reserv-val" id="res-litros">--L</p>
-          <p class="reserv-lbl">volume atual</p>
-          <p class="reserv-val" style="margin-top:10px" id="res-dias">--</p>
-          <p class="reserv-lbl">dias de autonomia</p>
-        </div>
-        <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
-          <div class="pct-wrap">
-            <svg width="80" height="80" viewBox="0 0 80 80">
-              <circle cx="40" cy="40" r="33" fill="none" stroke="#ebebeb" stroke-width="5"/>
-              <circle cx="40" cy="40" r="33" fill="none" stroke="#639922" stroke-width="5" stroke-dasharray="207.3" id="res-arc" stroke-dashoffset="52" stroke-linecap="round" transform="rotate(-90 40 40)"/>
-            </svg>
-            <span class="pct-label" id="res-pct">--</span>
-          </div>
-          <p style="font-size:11px;color:var(--text-ter)">de 7L</p>
-        </div>
-        <div style="text-align:right">
-          <p class="reserv-val" id="res-vaso">--mL</p>
-          <p class="reserv-lbl">por vaso / rega</p>
-          <p class="reserv-val" style="margin-top:8px" id="res-total">--mL</p>
-          <p class="reserv-lbl">total sistema (×2)</p>
-          <button class="btn-link" style="text-align:right;margin-top:10px" onclick="resetGalao()">Galão reabastecido →</button>
-        </div>
-      </div>
-      <div class="reserv-bottom">
-        <div style="display:flex;align-items:center;gap:8px">
-          <div class="dot dot-ok" id="boia-dot"></div>
-          <span style="font-size:13px" id="boia-label">—</span>
-        </div>
-        <span style="font-size:11px;color:var(--text-ter)" id="boia-ts">—</span>
-      </div>
-    </div>
-  </div>
-
-  <div class="sec">
-    <p class="lbl">Análises Visuais</p>
-    <div class="card" id="analises-visuais">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-        <p class="drive-title">Relatórios por foto</p>
-        <span style="font-size:11px;color:var(--text-ter)" id="analises-count">Carregando...</span>
-      </div>
-      <div id="analises-lista"></div>
-    </div>
-  </div>
-
-  <div class="sec">
-    <p class="lbl">Últimos Eventos</p>
-    <div class="card" id="eventos-list">
-      <p style="font-size:13px;color:var(--text-ter)">Carregando eventos...</p>
-    </div>
-  </div>
-
-  <div class="sec" id="sec-historico" style="display:none">
-    <p class="lbl">Histórico de Ciclos</p>
-    <div class="card" id="historico-list">
-      <p style="font-size:13px;color:var(--text-ter)">Carregando histórico...</p>
-    </div>
-  </div>
-</main>
 
 </body>
 </html>
