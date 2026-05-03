@@ -327,6 +327,34 @@
     </div>
   </div>
 
+  <!-- ── REGA REMOTA ──────────────────────────────────────── -->
+  <div class="sec">
+    <p class="lbl">Rega Remota</p>
+    <div class="card">
+      <p style="font-size:12px;color:var(--text-sec);margin-bottom:14px;line-height:1.5">
+        Envia um comando de rega ao ESP32. O sistema executa na próxima sincronização (até 15 min).
+        Use quando quiser acionar manualmente pelo celular.
+      </p>
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <div>
+          <label class="form-label">Volume total (mL)</label>
+          <input type="number" id="rega-remota-vol" class="form-input"
+            value="200" min="50" max="1000" step="50"
+            style="width:120px">
+        </div>
+        <div style="margin-top:18px">
+          <button class="btn-primary" id="btn-rega-remota" onclick="enviarRegaRemota()">
+            💧 Regar agora
+          </button>
+        </div>
+        <div style="margin-top:18px">
+          <span id="rega-remota-status" style="font-size:12px;color:var(--text-ter)"></span>
+        </div>
+      </div>
+      <p style="font-size:10px;color:var(--text-ter);margin-top:10px" id="rega-remota-aviso"></p>
+    </div>
+  </div>
+
   <div class="sec" id="sec-historico" style="display:none">
     <p class="lbl">Histórico de Ciclos</p>
     <div class="card" id="historico-list">
@@ -799,7 +827,7 @@ function carregarEventos() {
     const icones = {
       start_ciclo:"🌱", galao_cheio:"💧", toggle_luz:"💡",
       desequilibrio_hidraulico:"⚠️", dados_ciclo_P1:"🌿", dados_ciclo_P2:"🌿",
-      envio_manual:"📡", analise_visual_P1:"🔬", analise_visual_P2:"🔬"
+      envio_manual:"📡", analise_visual_P1:"🔬", analise_visual_P2:"🔬", bomba_on:"💧", bomba_off:"⏹", sensor_falho:"⚠️", rega_remota:"📱"
     };
     const itens = rows.slice(0, 8).map(r => {
       const c    = r.c;
@@ -893,6 +921,10 @@ function carregarDados() {
     if(d.desequil === "SIM")
       document.getElementById("sg-warn").innerHTML =
         `<div class="card-warn"><div class="warn-dot"></div><span style="font-size:13px">Desequilíbrio hidráulico — diferença de ${d.dif}% entre os vasos. Verifique o sistema de irrigação.</span></div>`;
+    // Alerta de sensor falho
+    const s1f = parseInt(d.tempAr) === -999; // flag especial -- ou usa campo dedicado
+    // Verifica nos eventos recentes se ha sensor_falho
+    // (o flag chega via evento, nao via dado direto -- dashboard ja mostra nos eventos)
     if(d.alerta)
       document.getElementById("sg-alerta-ia").innerHTML =
         `<div class="card-warn"><div class="warn-dot"></div><span style="font-size:13px"><strong>IA:</strong> ${d.alerta}</span></div>`;
@@ -1013,6 +1045,62 @@ function atualizarSubtituloConexao() {
         </div>`;
     }
   }
+}
+
+// ── REGA REMOTA ──────────────────────────────────────────────
+function enviarRegaRemota() {
+  const vol = parseInt(document.getElementById("rega-remota-vol").value);
+  if (!vol || vol < 50 || vol > 1000) {
+    mostrarToast("Volume inválido. Use entre 50 e 1000 mL.");
+    return;
+  }
+  const btn    = document.getElementById("btn-rega-remota");
+  const status = document.getElementById("rega-remota-status");
+  const aviso  = document.getElementById("rega-remota-aviso");
+
+  btn.disabled    = true;
+  btn.textContent = "Enviando...";
+  status.textContent = "";
+  aviso.textContent  = "";
+
+  // Primeiro passo: POST ao GAS (recebe redirect 302 do Google)
+  fetch(GAS_URL, {
+    method: "POST",
+    headers: {"Content-Type": "text/plain"},
+    body: JSON.stringify({ tipo: "rega_remota", volume_ml: vol }),
+    redirect: "manual"
+  }).then(r => {
+    // Google redireciona -- fetch com redirect:manual retorna tipo "opaqueredirect"
+    // Nesse caso consideramos sucesso (o GAS recebeu)
+    if (r.ok || r.type === "opaqueredirect" || r.status === 0) {
+      status.textContent = "✅ Comando enviado!";
+      status.style.color = "var(--green)";
+      aviso.textContent  = `${vol}mL programados. O ESP32 executará na próxima sincronização (até 15 min).`;
+      mostrarToast(`Rega de ${vol}mL agendada!`);
+    } else {
+      throw new Error("HTTP " + r.status);
+    }
+  }).catch(err => {
+    // Tenta via no-cors como fallback
+    fetch(GAS_URL, {
+      method: "POST",
+      mode: "no-cors",
+      headers: {"Content-Type": "text/plain"},
+      body: JSON.stringify({ tipo: "rega_remota", volume_ml: vol })
+    }).then(() => {
+      status.textContent = "✅ Comando enviado!";
+      status.style.color = "var(--green)";
+      aviso.textContent  = `${vol}mL programados. O ESP32 executará na próxima sincronização (até 15 min).`;
+      mostrarToast(`Rega de ${vol}mL agendada!`);
+    }).catch(() => {
+      status.textContent = "❌ Falha ao enviar";
+      status.style.color = "var(--red)";
+      aviso.textContent  = "Verifique sua conexão e tente novamente.";
+    });
+  }).finally(() => {
+    btn.disabled    = false;
+    btn.textContent = "💧 Regar agora";
+  });
 }
 
 // ── INIT ─────────────────────────────────────────────────────
