@@ -300,6 +300,8 @@ function processarRega(ss, dados) {
     dados.fasePlanta || "vegetacao",
     dados.diasCiclo  || 0
   ]]);
+  // Força formato DateTime na célula de Timestamp (evita que Sheets salve como Time-only)
+  aba.getRange(2, 1).setNumberFormat("dd/MM/yyyy HH:mm:ss");
 
   Logger.log("[REGA] " + (dados.trigger || "auto") +
              " V1=" + vaso1 + " V2=" + vaso2 + " total=" + total + "mL");
@@ -566,6 +568,8 @@ function configurarCabecalho(aba, nome) {
       "Timestamp", "Hora", "Trigger", "Vaso 1 (mL)", "Vaso 2 (mL)",
       "Total (mL)", "Duracao (s)", "Galao (mL)", "Fase", "Dias Ciclo"
     ]]).setFontWeight("bold");
+    // Garante que coluna Timestamp seja DateTime (não Time) para gviz retornar data completa
+    aba.getRange("A2:A").setNumberFormat("dd/MM/yyyy HH:mm:ss");
   }
 }
 

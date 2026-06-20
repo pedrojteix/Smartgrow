@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SmartGrow ? Monitor de Cultivo</title>
+<title>SmartGrow — Monitor de Cultivo</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&family=DM+Mono:wght@400;500&display=swap');
@@ -133,19 +133,19 @@
       <p class="aut-unit">dias restantes</p>
       <div class="bar-bg"><div class="bar-fill" id="aut-bar" style="width:0%"></div></div>
       <p class="aut-meta" id="aut-meta">Calculando...</p>
-      <button class="btn-link" onclick="resetGalao()">Gal?o reabastecido (7L) ?</button>
+      <button class="btn-link" onclick="resetGalao()">Galão reabastecido (7L) ↑</button>
     </div>
     <div class="card" style="display:flex;flex-direction:column">
-      <p class="lbl">Diagn?stico IA</p>
+      <p class="lbl">Diagnóstico IA</p>
       <p style="font-size:14px;font-weight:500;margin:0 0 auto;line-height:1.4" id="diag-text">Carregando...</p>
-      <p style="font-size:11px;color:var(--text-ter);margin:8px 0 0" id="diag-ts">?</p>
+      <p style="font-size:11px;color:var(--text-ter);margin:8px 0 0" id="diag-ts">—</p>
     </div>
   </div>
 
   <div class="sec hidden" id="sec-motivo">
     <div class="card" style="padding:12px 16px">
-      <p class="lbl" style="margin-bottom:4px">Motivo da decis?o da IA</p>
-      <p style="font-size:12px;color:var(--text-sec);line-height:1.5" id="motivo-text">?</p>
+      <p class="lbl" style="margin-bottom:4px">Motivo da decisão da IA</p>
+      <p style="font-size:12px;color:var(--text-sec);line-height:1.5" id="motivo-text">—</p>
     </div>
   </div>
 
@@ -157,18 +157,18 @@
         <div style="flex:1">
           <div class="fator-bar-bg"><div class="fator-bar-fill" id="fator-bar" style="width:0%"></div></div>
           <div class="fator-scale"><span>0.0</span><span>0.5</span><span>1.0</span><span>1.5</span><span>2.0</span></div>
-          <p class="fator-desc" id="fator-desc">?</p>
+          <p class="fator-desc" id="fator-desc">—</p>
         </div>
       </div>
     </div>
   </div>
 
   <div class="sec">
-    <p class="lbl">Sensores ? deslize para ver mais</p>
+    <p class="lbl">Sensores — deslize para ver mais</p>
     <div class="metrics">
       <div class="metric"><p class="metric-lbl">Vaso 1</p><p class="metric-val" id="m-u1">--<span class="metric-unit">%</span></p></div>
       <div class="metric"><p class="metric-lbl">Vaso 2</p><p class="metric-val" id="m-u2">--<span class="metric-unit">%</span></p></div>
-      <div class="metric"><p class="metric-lbl">M?dia</p><p class="metric-val" id="m-med">--<span class="metric-unit">%</span></p></div>
+      <div class="metric"><p class="metric-lbl">Média</p><p class="metric-val" id="m-med">--<span class="metric-unit">%</span></p></div>
       <div class="metric"><p class="metric-lbl">Vol/vaso</p><p class="metric-val" id="m-vbase">--<span class="metric-unit">mL</span></p></div>
       <div class="metric"><p class="metric-lbl">Vol total</p><p class="metric-val" id="m-vtotal">--<span class="metric-unit">mL</span></p></div>
       <div class="metric"><p class="metric-lbl">Temp Ar</p><p class="metric-val" id="m-temp"><span style="color:var(--text-ter);font-size:11px">--</span></p></div>
@@ -179,7 +179,7 @@
   </div>
 
   <div class="sec">
-    <p class="lbl">Ilumina??o</p>
+    <p class="lbl">Iluminação</p>
     <div class="card">
       <div class="luz-grid">
         <div class="luz-item">
@@ -188,7 +188,7 @@
           <span style="font-size:10px;padding:2px 8px;border-radius:20px;display:inline-block;margin-top:6px" id="luz-badge">--</span>
         </div>
         <div class="luz-item">
-          <p class="metric-lbl">Fase / hor?rio</p>
+          <p class="metric-lbl">Fase / horário</p>
           <p class="luz-val" id="luz-fase">--</p>
           <p style="font-size:11px;color:var(--text-sec);margin-top:4px" id="luz-horario">--</p>
         </div>
@@ -204,21 +204,21 @@
     <p class="lbl">Plantas</p>
     <div class="plantas-grid">
       <div class="card">
-        <p class="planta-nome">Planta 1 ? Vaso 1</p>
-        <p class="planta-dias" id="dias-p1">Ciclo n?o iniciado</p>
+        <p class="planta-nome">Planta 1 — Vaso 1</p>
+        <p class="planta-dias" id="dias-p1">Ciclo não iniciado</p>
         <div class="fase-pills" id="fase-p1">
-          <button class="pill" onclick="setFase(0,'Germina??o')">Germina??o</button>
-          <button class="pill ativa" onclick="setFase(0,'Vegeta??o')">Vegeta??o</button>
-          <button class="pill" onclick="setFase(0,'Flora??o')">Flora??o</button>
+          <button class="pill" onclick="setFase(0,'Germinação')">Germinação</button>
+          <button class="pill ativa" onclick="setFase(0,'Vegetação')">Vegetação</button>
+          <button class="pill" onclick="setFase(0,'Floração')">Floração</button>
         </div>
-        <p class="planta-info" id="info-p1">Fase atual: <strong>Vegeta??o</strong></p>
+        <p class="planta-info" id="info-p1">Fase atual: <strong>Vegetação</strong></p>
         <div class="ciclo-info" id="ciclo-p1"></div>
         <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">
-          <button class="btn-colheita" style="color:var(--blue);border-color:var(--blue)" onclick="toggleForm(1)">Inserir dados ?</button>
-          <button class="btn-colheita" onclick="colherPlanta(1)">Registrar colheita ?</button>
+          <button class="btn-colheita" style="color:var(--blue);border-color:var(--blue)" onclick="toggleForm(1)">Inserir dados ↓</button>
+          <button class="btn-colheita" onclick="colherPlanta(1)">Registrar colheita ✓</button>
         </div>
         <div id="form-p1" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
-          <div class="form-row"><label class="form-label">Germina??o</label><input class="form-input" type="date" id="p1-germ"></div>
+          <div class="form-row"><label class="form-label">Germinação</label><input class="form-input" type="date" id="p1-germ"></div>
           <div class="form-row"><label class="form-label">Primeiro vaso (potinho)</label><input class="form-input" type="date" id="p1-vaso1"></div>
           <div class="form-row"><label class="form-label">Altura ao entrar no SmartGrow (cm)</label><input class="form-input" type="number" id="p1-altura" placeholder="ex: 18" min="0" max="200"></div>
           <div class="form-row"><label class="form-label">Entrada no SmartGrow (vaso 11L)</label><input class="form-input" type="date" id="p1-smartgrow"></div>
@@ -226,21 +226,21 @@
         </div>
       </div>
       <div class="card">
-        <p class="planta-nome">Planta 2 ? Vaso 2</p>
-        <p class="planta-dias" id="dias-p2">Ciclo n?o iniciado</p>
+        <p class="planta-nome">Planta 2 — Vaso 2</p>
+        <p class="planta-dias" id="dias-p2">Ciclo não iniciado</p>
         <div class="fase-pills" id="fase-p2">
-          <button class="pill" onclick="setFase(1,'Germina??o')">Germina??o</button>
-          <button class="pill ativa" onclick="setFase(1,'Vegeta??o')">Vegeta??o</button>
-          <button class="pill" onclick="setFase(1,'Flora??o')">Flora??o</button>
+          <button class="pill" onclick="setFase(1,'Germinação')">Germinação</button>
+          <button class="pill ativa" onclick="setFase(1,'Vegetação')">Vegetação</button>
+          <button class="pill" onclick="setFase(1,'Floração')">Floração</button>
         </div>
-        <p class="planta-info" id="info-p2">Fase atual: <strong>Vegeta??o</strong></p>
+        <p class="planta-info" id="info-p2">Fase atual: <strong>Vegetação</strong></p>
         <div class="ciclo-info" id="ciclo-p2"></div>
         <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">
-          <button class="btn-colheita" style="color:var(--blue);border-color:var(--blue)" onclick="toggleForm(2)">Inserir dados ?</button>
-          <button class="btn-colheita" onclick="colherPlanta(2)">Registrar colheita ?</button>
+          <button class="btn-colheita" style="color:var(--blue);border-color:var(--blue)" onclick="toggleForm(2)">Inserir dados ↓</button>
+          <button class="btn-colheita" onclick="colherPlanta(2)">Registrar colheita ✓</button>
         </div>
         <div id="form-p2" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
-          <div class="form-row"><label class="form-label">Germina??o</label><input class="form-input" type="date" id="p2-germ"></div>
+          <div class="form-row"><label class="form-label">Germinação</label><input class="form-input" type="date" id="p2-germ"></div>
           <div class="form-row"><label class="form-label">Primeiro vaso (potinho)</label><input class="form-input" type="date" id="p2-vaso1"></div>
           <div class="form-row"><label class="form-label">Altura ao entrar no SmartGrow (cm)</label><input class="form-input" type="number" id="p2-altura" placeholder="ex: 16" min="0" max="200"></div>
           <div class="form-row"><label class="form-label">Entrada no SmartGrow (vaso 11L)</label><input class="form-input" type="date" id="p2-smartgrow"></div>
@@ -257,7 +257,7 @@
           <button class="jbtn ativo" onclick="setTipoChart(this,'solo')">Solo</button>
           <button class="jbtn" onclick="setTipoChart(this,'umid_ar')">Umid. Ar</button>
           <button class="jbtn" onclick="setTipoChart(this,'temp_ar')">Temp. Ar</button>
-          <button class="jbtn" onclick="setTipoChart(this,'pressao')">Press?o</button>
+          <button class="jbtn" onclick="setTipoChart(this,'pressao')">Pressão</button>
           <button class="jbtn" onclick="setTipoChart(this,'temp_solo')">T. Solo</button>
         </div>
         <div class="jbtns">
@@ -267,16 +267,16 @@
           <button class="jbtn" onclick="setJanela(this,9999)">Tudo</button>
         </div>
       </div>
-      <!-- Legenda din?mica -->
+      <!-- Legenda dinâmica -->
       <div id="chart-legend" class="legend" style="margin:6px 0 8px"></div>
       <div style="position:relative;height:220px">
-        <canvas id="sg-chart" role="img">Hist?rico de sensores.</canvas>
+        <canvas id="sg-chart" role="img">Histórico de sensores.</canvas>
       </div>
     </div>
   </div>
 
   <div class="sec">
-    <p class="lbl">Reservat?rio</p>
+    <p class="lbl">Reservatório</p>
     <div class="card">
       <div class="reserv-grid">
         <div>
@@ -299,16 +299,16 @@
           <p class="reserv-val" id="res-vaso">--mL</p>
           <p class="reserv-lbl">por vaso / rega</p>
           <p class="reserv-val" style="margin-top:8px" id="res-total">--mL</p>
-          <p class="reserv-lbl">total sistema (?2)</p>
-          <button class="btn-link" style="text-align:right;margin-top:10px" onclick="resetGalao()">Gal?o reabastecido ?</button>
+          <p class="reserv-lbl">total sistema (×2)</p>
+          <button class="btn-link" style="text-align:right;margin-top:10px" onclick="resetGalao()">Galão reabastecido ↑</button>
         </div>
       </div>
       <div class="reserv-bottom">
         <div style="display:flex;align-items:center;gap:8px">
           <div class="dot dot-ok" id="boia-dot"></div>
-          <span style="font-size:13px" id="boia-label">?</span>
+          <span style="font-size:13px" id="boia-label">—</span>
         </div>
-        <span style="font-size:11px;color:var(--text-ter)" id="boia-ts">?</span>
+        <span style="font-size:11px;color:var(--text-ter)" id="boia-ts">—</span>
       </div>
     </div>
   </div>
@@ -327,10 +327,10 @@
   </div>
 
   <div class="sec">
-    <p class="lbl">An?lises Visuais</p>
+    <p class="lbl">Análises Visuais</p>
     <div class="card" id="analises-visuais">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-        <p class="drive-title">Relat?rios por foto</p>
+        <p class="drive-title">Relatórios por foto</p>
         <span style="font-size:11px;color:var(--text-ter)" id="analises-count">Carregando...</span>
       </div>
       <div id="analises-lista"></div>
@@ -338,7 +338,7 @@
   </div>
 
   <div class="sec">
-    <p class="lbl">?ltimos Eventos</p>
+    <p class="lbl">Últimos Eventos</p>
     <div class="card" id="eventos-list">
       <p style="font-size:13px;color:var(--text-ter)">Carregando eventos...</p>
     </div>
@@ -373,7 +373,7 @@
     <p class="lbl">Rega Remota</p>
     <div class="card">
       <p style="font-size:12px;color:var(--text-sec);margin-bottom:14px;line-height:1.5">
-        Envia um comando de rega ao ESP32. O sistema executa na pr?xima sincroniza??o (at? 15 min).
+        Envia um comando de rega ao ESP32. O sistema executa na próxima sincronização (até 15 min).
       </p>
       <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
         <div>
@@ -394,8 +394,8 @@
       <p style="font-size:10px;color:var(--text-ter);margin-top:10px" id="rega-remota-aviso"></p>
       <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border)">
         <p style="font-size:12px;color:var(--text-sec);margin-bottom:10px">
-          ? <strong>Controle de emerg?ncia</strong> ? bloqueia toda rega autom?tica e remota at? desbloquear.
-          O ESP32 aplica o comando na pr?xima sincroniza??o (at? 15 min).
+          ⚠ <strong>Controle de emergência</strong> — bloqueia toda rega automática e remota até desbloquear.
+          O ESP32 aplica o comando na próxima sincronização (até 15 min).
         </p>
         <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
           <button class="btn-primary" style="background:var(--red)" onclick="bloquearBomba()">
@@ -411,9 +411,9 @@
   </div>
 
   <div class="sec" id="sec-historico" style="display:none">
-    <p class="lbl">Hist?rico de Ciclos</p>
+    <p class="lbl">Histórico de Ciclos</p>
     <div class="card" id="historico-list">
-      <p style="font-size:13px;color:var(--text-ter)">Carregando hist?rico...</p>
+      <p style="font-size:13px;color:var(--text-ter)">Carregando histórico...</p>
     </div>
   </div>
 </main>
@@ -432,7 +432,7 @@ const GALAO_ML  = 7000;
 // ?? ESTADO GLOBAL ?????????????????????????????????????????????
 const ESP32_TIMEOUT_MIN = 20; // minutos sem dados = ESP32 offline
 let galaoAtual    = 7000;
-let ultimaLeituraTs = null; // Date object da ?ltima leitura recebida
+let ultimaLeituraTs = null; // Date object da última leitura recebida
 let timerStatusESP32 = null;
 let chartInst     = null;
 let janelaAtual   = 96; // 96 leituras = ~24h (4 leituras/h)
@@ -451,15 +451,15 @@ const FASES_LUZ = {
   vegetacao: {h:17,liga:7,desliga:0},
   floracao:  {h:12,liga:8,desliga:20},
 };
-const FASE_NOMES = {germinacao:"Germina??o",vegetacao:"Vegeta??o",floracao:"Flora??o"};
+const FASE_NOMES = {germinacao:"Germinação",vegetacao:"Vegetação",floracao:"Floração"};
 
 // ?? UTILIT?RIOS ???????????????????????????????????????????????
 function fatorInfo(f) {
-  if(f===0)  return {label:"N?o regar",   cor:"#378ADD"};
+  if(f===0)  return {label:"Não regar",    cor:"#378ADD"};
   if(f<=0.5) return {label:"Rega leve",   cor:"#639922"};
   if(f<=1.0) return {label:"Rega normal", cor:"#BA7517"};
   if(f<=1.5) return {label:"Rega intensa",cor:"#D85A30"};
-  return           {label:"Emerg?ncia",  cor:"#E24B4A"};
+  return           {label:"Emergência",  cor:"#E24B4A"};
 }
 
 function diasEntre(dataStr) {
@@ -523,8 +523,8 @@ function atualizarReservatorio(galaoMlSheets, vbase, vtotal) {
   document.getElementById("aut-bar").style.width          = pct + "%";
   document.getElementById("aut-bar").style.background     = cor;
   document.getElementById("aut-meta").textContent         = semDado
-    ? litros + "L restantes ? aguardando primeira rega"
-    : litros + "L restantes ? " + vtotal + "mL/rega";
+    ? litros + "L restantes — aguardando primeira rega"
+    : litros + "L restantes — " + vtotal + "mL/rega";
 }
 
 function resetGalao() {
@@ -536,8 +536,8 @@ function resetGalao() {
 function atualizarLuz(fase, luzOn) {
   const p = FASES_LUZ[fase] || FASES_LUZ.vegetacao;
   const descl = p.desliga === 0
-    ? "07:00 ? 00:00"
-    : `${String(p.liga).padStart(2,"0")}:00 ? ${String(p.desliga).padStart(2,"0")}:00`;
+    ? "07:00 – 00:00"
+    : `${String(p.liga).padStart(2,"0")}:00 – ${String(p.desliga).padStart(2,"0")}:00`;
 
   document.getElementById("luz-status").textContent = luzOn ? "Ligada" : "Desligada";
   const b = document.getElementById("luz-badge");
@@ -554,7 +554,7 @@ function atualizarPlanta(idx, diasCiclo) {
   const n    = idx + 1;
   const dados = idx === 0 ? dadosCicloP1 : dadosCicloP2;
   document.getElementById(`dias-p${n}`).textContent =
-    diasCiclo > 0 ? `Dia ${diasCiclo} no SmartGrow` : "Ciclo n?o iniciado";
+    diasCiclo > 0 ? `Dia ${diasCiclo} no SmartGrow` : "Ciclo não iniciado";
 
   const el = document.getElementById(`ciclo-p${n}`);
   if(dados) {
@@ -625,24 +625,13 @@ function salvarDadosPlanta(n) {
   }).catch(() => {});
 }
 
-// ?? GR?FICO ??????????????????????????????????????????????????
-function formatarLabel(d, janela) {
-  // Hoje (96): mostra hora HH:MM
-  // 7d / 14d (672/1344): mostra dia do mes "DD/MM"
-  // Tudo (9999): mostra mes "MM/AAAA" a partir do timestamp completo
-  if (janela <= 96) return d.ts; // ja e HH:MM
-  // ts e HH:MM -- precisamos da data completa que esta no campo d.dataCompleta
-  const dc = d.dataCompleta || d.ts;
-  if (janela >= 9999) {
-    // Extrai mes/ano do timestamp completo ex "5/30/2026, 14:23:00"
-    const m = dc.match(/(\d+)\/(\d+)\/(\d+)/);
-    if (m) return m[1].padStart(2,'0') + '/' + m[3];
-    return dc.substring(0, 7);
-  }
-  // 7d ou 14d: dia/mes
-  const m = dc.match(/(\d+)\/(\d+)\/(\d+)/);
-  if (m) return m[2].padStart(2,'0') + '/' + m[1].padStart(2,'0');
-  return dc.substring(0, 5);
+// GRÁFICO
+// Parseia Date(y,m,d,h,min,s) do gviz — formato independente de locale
+function parseGvizDate(v) {
+  if (!v) return null;
+  const m = String(v).match(/Date\((\d+),(\d+),(\d+),(\d+),(\d+)/);
+  if (!m) return null;
+  return new Date(+m[1], +m[2], +m[3], +m[4], +m[5]);
 }
 
 const CHART_CONFIGS = {
@@ -651,11 +640,11 @@ const CHART_CONFIGS = {
     datasets: s => [
       {label:'Vaso 1', data:s.map(d=>d.u1),    borderColor:'#378ADD', borderWidth:1.5, pointRadius:2, tension:0.3, fill:false},
       {label:'Vaso 2', data:s.map(d=>d.u2),    borderColor:'#639922', borderWidth:1.5, pointRadius:2, tension:0.3, fill:false},
-      {label:'M?dia',  data:s.map(d=>d.media), borderColor:'#888780', borderWidth:1,   pointRadius:1, tension:0.3, fill:false, borderDash:[4,3]},
+      {label:'Média',  data:s.map(d=>d.media), borderColor:'#888780', borderWidth:1,   pointRadius:1, tension:0.3, fill:false, borderDash:[4,3]},
     ],
     yOpts: {min:0, max:100, ticks:{callback:v=>v+'%'}},
     cores: ['#378ADD','#639922','#888780'],
-    nomes: ['Vaso 1','Vaso 2','M?dia'],
+    nomes: ['Vaso 1','Vaso 2','Média'],
   },
   umid_ar: {
     titulo: 'Umidade do Ar (%)',
@@ -667,38 +656,87 @@ const CHART_CONFIGS = {
     nomes: ['Umid. Ar'],
   },
   temp_ar: {
-    titulo: 'Temperatura do Ar (?C)',
+    titulo: 'Temperatura do Ar (°C)',
     datasets: s => [
       {label:'Temp. Ar', data:s.map(d=>d.tempAr), borderColor:'#E24B4A', borderWidth:1.5, pointRadius:2, tension:0.3, fill:false},
     ],
-    yOpts: {ticks:{callback:v=>v+'?C'}},
+    yOpts: {ticks:{callback:v=>v+'°C'}},
     cores: ['#E24B4A'],
     nomes: ['Temp. Ar'],
   },
   pressao: {
-    titulo: 'Press?o Atmosf?rica (hPa)',
+    titulo: 'Pressão Atmosférica (hPa)',
     datasets: s => [
-      {label:'Press?o', data:s.map(d=>d.pressao), borderColor:'#BA7517', borderWidth:1.5, pointRadius:2, tension:0.3, fill:false},
+      {label:'Pressão', data:s.map(d=>d.pressao), borderColor:'#BA7517', borderWidth:1.5, pointRadius:2, tension:0.3, fill:false},
     ],
     yOpts: {ticks:{callback:v=>v+'hPa'}},
     cores: ['#BA7517'],
-    nomes: ['Press?o'],
+    nomes: ['Pressão'],
   },
   temp_solo: {
-    titulo: 'Temperatura do Solo (?C)',
+    titulo: 'Temperatura do Solo (°C)',
     datasets: s => [
       {label:'T. Solo', data:s.map(d=>d.tempTerra), borderColor:'#4a7c59', borderWidth:1.5, pointRadius:2, tension:0.3, fill:false},
     ],
-    yOpts: {ticks:{callback:v=>v+'?C'}},
+    yOpts: {ticks:{callback:v=>v+'°C'}},
     cores: ['#4a7c59'],
     nomes: ['T. Solo'],
   },
 };
 
 function renderChart(dados) {
-  const slice = dados.slice(0, janelaAtual).reverse();
-  const cfg   = CHART_CONFIGS[tipoChart] || CHART_CONFIGS.solo;
-  const labels = slice.map(d => formatarLabel(d, janelaAtual));
+  const agora = new Date();
+  let slice;
+
+  if (janelaAtual <= 96) {
+    // Hoje: desde meia-noite local
+    const meianoite = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate());
+    slice = dados.filter(d => d.ts_date && d.ts_date >= meianoite);
+    if (!slice.length) slice = dados.slice(0, 96); // fallback sem ts_date
+  } else if (janelaAtual <= 672) {
+    const inicio = new Date(agora.getTime() - 7 * 86400000);
+    slice = dados.filter(d => d.ts_date && d.ts_date >= inicio);
+    if (!slice.length) slice = dados.slice(0, 672);
+  } else if (janelaAtual <= 1344) {
+    const inicio = new Date(agora.getTime() - 14 * 86400000);
+    slice = dados.filter(d => d.ts_date && d.ts_date >= inicio);
+    if (!slice.length) slice = dados.slice(0, 1344);
+  } else {
+    slice = [...dados];
+  }
+  // Dados vêm newest-first; revertemos para cronológico
+  slice = slice.reverse();
+
+  const cfg = CHART_CONFIGS[tipoChart] || CHART_CONFIGS.solo;
+
+  // Gera labels baseados em ts_date (formato correto por modo)
+  const labels = slice.map((d, i) => {
+    const dt = d.ts_date;
+    if (!dt) return d.ts; // fallback legado
+
+    if (janelaAtual <= 96) {
+      // Hoje: label só na virada de hora exata (minuto == 0)
+      return dt.getMinutes() === 0
+        ? String(dt.getHours()).padStart(2,'0') + ':00'
+        : '';
+    } else if (janelaAtual >= 9999) {
+      // Tudo: label na virada de mês
+      if (i === 0) return pad2(dt.getMonth()+1)+'/'+dt.getFullYear();
+      const prev = slice[i-1].ts_date;
+      if (!prev) return '';
+      return (prev.getMonth()!==dt.getMonth() || prev.getFullYear()!==dt.getFullYear())
+        ? pad2(dt.getMonth()+1)+'/'+dt.getFullYear() : '';
+    } else {
+      // 7d / 14d: label na virada de dia
+      if (i === 0) return pad2(dt.getDate())+'/'+pad2(dt.getMonth()+1);
+      const prev = slice[i-1].ts_date;
+      if (!prev) return '';
+      return (prev.getDate()!==dt.getDate() || prev.getMonth()!==dt.getMonth())
+        ? pad2(dt.getDate())+'/'+pad2(dt.getMonth()+1) : '';
+    }
+  });
+
+  function pad2(n) { return String(n).padStart(2,'0'); }
 
   // Atualiza legenda
   const legEl = document.getElementById('chart-legend');
@@ -724,16 +762,13 @@ function renderChart(dados) {
         x: {
           ticks: {
             font: { size:10 },
-            maxRotation: 45,
-            autoSkip: true,
-            maxTicksLimit: janelaAtual <= 96 ? 10 : janelaAtual <= 1344 ? 14 : 12,
+            maxRotation: 0,
+            autoSkip: false, // controlamos manualmente via labels vazios
           },
-          // Linhas verticais no eixo X para marcar cada ponto de tempo
           grid: {
             display: true,
-            color: 'rgba(0,0,0,0.05)',
+            color: 'rgba(0,0,0,0.04)',
             lineWidth: 1,
-            drawTicks: true,
           }
         }
       }
@@ -759,7 +794,7 @@ function setTipoChart(btn, tipo) {
 
 // ?? COLHEITA E PDF ????????????????????????????????????????????
 function colherPlanta(numPlanta) {
-  if(!confirm(`Registrar colheita da Planta ${numPlanta}?\nIsso vai gerar o relat?rio PDF e salvar o ciclo no hist?rico.`)) return;
+  if(!confirm(`Registrar colheita da Planta ${numPlanta}?\nIsso vai gerar o relatório PDF e salvar o ciclo no histórico.`)) return;
   const ciclo = numPlanta === 1 ? dadosCicloP1 : dadosCicloP2;
   const st = document.getElementById("sg-status");
   st.textContent = "Gerando PDF..."; st.className = "badge badge-load";
@@ -856,10 +891,10 @@ function montarHTMLRelatorio(n, ciclo, r, diags, pontos) {
   </svg>` : "";
 
   return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
-<title>SmartGrow ? Relat?rio Planta ${n}</title>
+<title>SmartGrow — Relatório Planta ${n}</title>
 </head><body>
 <div class="capa">
-  <div><h1>SmartGrow</h1><p class="sub">Relat?rio de Ciclo ? Auditoria de Cultivo</p><p class="sub" style="margin-top:6px;color:#4a7c59">SGRW_DC_P${n}_${r.dataColheita.replace(/\//g,"-")}</p></div>
+  <div><h1>SmartGrow</h1><p class="sub">Relatório de Ciclo — Auditoria de Cultivo</p><p class="sub" style="margin-top:6px;color:#4a7c59">SGRW_DC_P${n}_${r.dataColheita.replace(/\//g,"-")}</p></div>
   <div style="text-align:right">
     <span style="background:#4a7c59;color:#fff;font-size:11px;padding:3px 12px;border-radius:20px;display:inline-block;margin-bottom:6px">Planta ${n} ? Vaso ${n}</span>
     <p style="font-size:14px;font-weight:500">Ciclo Encerrado</p>
@@ -871,31 +906,31 @@ function montarHTMLRelatorio(n, ciclo, r, diags, pontos) {
 <div class="grid4">
   <div class="card-m"><p class="v">${r.totalDias}</p><p class="l">dias de vida total</p></div>
   <div class="card-m"><p class="v">${r.diasSmartGrow}</p><p class="l">dias no SmartGrow</p></div>
-  <div class="card-m"><p class="v">${(r.totalAguaML/1000).toFixed(1)}L</p><p class="l">?gua consumida</p></div>
-  <div class="card-m"><p class="v">${r.mediaUmidade}%</p><p class="l">umidade m?dia</p></div>
+  <div class="card-m"><p class="v">${(r.totalAguaML/1000).toFixed(1)}L</p><p class="l">água consumida</p></div>
+  <div class="card-m"><p class="v">${r.mediaUmidade}%</p><p class="l">umidade média</p></div>
   <div class="card-m"><p class="v">${ciclo?.altura||"--"}cm</p><p class="l">altura de entrada</p></div>
-  <div class="card-m"><p class="v">${r.maxFator}</p><p class="l">fator rega m?x.</p></div>
+  <div class="card-m"><p class="v">${r.maxFator}</p><p class="l">fator rega máx.</p></div>
   <div class="card-m"><p class="v">${r.totalLeituras}</p><p class="l">leituras</p></div>
   <div class="card-m"><p class="v">${r.fases.length}</p><p class="l">fases completadas</p></div>
 </div>
 
 <p class="sec-title">Linha do Tempo</p>
 ${[
-  ["Germina??o", fmtData(ciclo?.germinacao)],
+  ["Germinação", fmtData(ciclo?.germinacao)],
   ["Primeiro vaso", fmtData(ciclo?.vaso1)],
-  [`Entrada no SmartGrow ? ${ciclo?.altura||"--"}cm`, fmtData(ciclo?.smartgrow)],
+  [`Entrada no SmartGrow — ${ciclo?.altura||"--"}cm`, fmtData(ciclo?.smartgrow)],
   ["Colheita", r.dataColheita],
 ].map(([l,d],i)=>`<div class="tl"><div class="tl-dot" ${i===3?'style="background:#E24B4A"':''}></div><div><strong>${l}</strong> <span style="color:#888;font-size:11px">${d}</span></div></div>`).join("")}
 
 <p class="sec-title">Consumo por Fase</p>
-<table><tr><th>Fase</th><th>Leituras</th><th>?gua Total</th><th>Umidade M?dia</th></tr>${fasesHTML}</table>
+<table><tr><th>Fase</th><th>Leituras</th><th>Água Total</th><th>Umidade Média</th></tr>${fasesHTML}</table>
 
-<p class="sec-title">Hist?rico de Umidade do Solo</p>
+<p class="sec-title">Histórico de Umidade do Solo</p>
 <div style="background:#f9faf9;border-radius:8px;padding:12px;margin-bottom:8px">${svgU}</div>
-<p style="font-size:10px;color:#888;margin-bottom:16px">Linha verde = alvo 75% | Linha laranja = m?nimo 35%</p>
+<p style="font-size:10px;color:#888;margin-bottom:16px">Linha verde = alvo 75% | Linha laranja = mínimo 35%</p>
 
-<p class="sec-title">Diagn?sticos Marcantes da IA</p>
-${diags.map(d=>`<div class="diag">${d}</div>`).join("")||'<p style="color:#888;font-size:12px">Nenhum diagn?stico registrado.</p>'}
+<p class="sec-title">Diagnósticos Marcantes da IA</p>
+${diags.map(d=>`<div class="diag">${d}</div>`).join("")||'<p style="color:#888;font-size:12px">Nenhum diagnóstico registrado.</p>'}
 
 <div class="rodape">
   <span>SmartGrow ? Sistema de Cultivo Indoor Automatizado</span>
@@ -937,13 +972,6 @@ function atualizarAutonomia() {
     litros + "L restantes · " + Math.round(consumoDiarioMedio) + "mL/dia (media 14d)";
 }
 
-function parseGvizData(v) {
-  if (!v) return null;
-  const m = String(v).match(/Date\((\d+),(\d+),(\d+),(\d+),(\d+),(\d+)\)/);
-  if (m) return new Date(+m[1], +m[2], +m[3], +m[4], +m[5], +m[6]);
-  const d = new Date(v);
-  return isNaN(d) ? null : d;
-}
 
 function carregarRegas() {
   fetch(REGAS_URL).then(r => r.text()).then(txt => {
@@ -951,21 +979,31 @@ function carregarRegas() {
     const rows = (json.table.rows || []).filter(r => r.c && r.c[0] && r.c[0].v);
     const nv = (c,i) => c[i]&&c[i].v!=null ? parseFloat(c[i].v)||0 : 0;
     const sv = (c,i) => c[i]&&c[i].v!=null ? String(c[i].v) : "";
+    const TRIGGERS_VALIDOS = ["auto","remota","teste","manual"];
 
     const regas = rows.map(r => {
       const c = r.c;
-      const dt = parseGvizData(c[0] && c[0].v);
+      // Parseia timestamp do gviz; ano 1899 = coluna salva como Hora-apenas no Sheets
+      const dt = parseGvizDate(c[0] && c[0].v);
+      const dtValido = dt && dt.getFullYear() > 2000;
+      const vaso1 = nv(c,3);
+      const vaso2 = nv(c,4);
+      // Recalcula total sempre (dado c[5] pode estar errado em dados legados)
+      const total = vaso1 + vaso2;
+      // Trigger: valida; se for número ou desconhecido, exibe "auto"
+      const triggerRaw = sv(c,2);
+      const trigger = TRIGGERS_VALIDOS.includes(triggerRaw) ? triggerRaw : "auto";
       return {
-        dt,
-        data:    dt ? dt.toLocaleDateString("pt-BR") : "",
-        hora:    sv(c,1),
-        trigger: sv(c,2) || "auto",
-        vaso1:   nv(c,3), vaso2: nv(c,4), total: nv(c,5),
+        dt: dtValido ? dt : null,
+        data: dtValido ? dt.toLocaleDateString("pt-BR") : "—",
+        hora: sv(c,1), // coluna Hora = HH:MM sempre disponível
+        trigger,
+        vaso1, vaso2, total,
         duracao: nv(c,6),
       };
     });
 
-    // Consumo medio diario dos ultimos 14 dias
+    // Consumo médio diário dos últimos 14 dias (só regas com data válida)
     const limite = Date.now() - 14 * 86400000;
     const recentes = regas.filter(x => x.dt && x.dt.getTime() >= limite);
     const soma = recentes.reduce((s,x) => s + x.total, 0);
@@ -975,7 +1013,7 @@ function carregarRegas() {
     renderRegasTabela(regas.slice(0, 20));
   }).catch(() => {
     const el = document.getElementById("regas-list");
-    if (el) el.innerHTML = '<p style="font-size:13px;color:var(--text-ter)">Aba REGAS ainda nao criada. Aparece apos a primeira rega.</p>';
+    if (el) el.innerHTML = '<p style="font-size:13px;color:var(--text-ter)">Aba REGAS ainda não criada. Aparece após a primeira rega.</p>';
   });
 }
 
@@ -992,12 +1030,14 @@ function renderRegasTabela(regas) {
   const td = (v,a,extra="") => `<td style="padding:7px 8px;font-size:12px;font-family:'DM Mono',monospace;text-align:${a};${extra}">${v}</td>`;
   const linhas = regas.map(r => {
     const cor = cores[r.trigger] || "#888780";
+    // Quando não há data válida, mostra só a hora (HH:MM)
+    const quando = r.data !== "—" ? r.data + " " + r.hora : r.hora;
     return `<tr style="border-bottom:1px solid var(--border)">
-      ${td(r.data + " " + r.hora, "left", "color:var(--text-sec);white-space:nowrap")}
+      ${td(quando, "left", "color:var(--text-sec);white-space:nowrap")}
       <td style="padding:7px 8px"><span style="font-size:10px;padding:2px 8px;border-radius:20px;background:${cor}22;color:${cor}">${r.trigger}</span></td>
-      ${td(r.vaso1 + "mL", "right")}
-      ${td(r.vaso2 + "mL", "right")}
-      ${td(r.total + "mL", "right", "font-weight:500")}
+      ${td(Math.round(r.vaso1) + "mL", "right")}
+      ${td(Math.round(r.vaso2) + "mL", "right")}
+      ${td(Math.round(r.total) + "mL", "right", "font-weight:500")}
     </tr>`;
   }).join("");
   el.innerHTML = `<table style="width:100%;border-collapse:collapse;min-width:380px">
@@ -1031,7 +1071,7 @@ function carregarEventos() {
         const num = tipo.includes("P2") ? "2" : "1";
         let dados = {};
         try { dados = JSON.parse(desc); } catch(e){}
-        const cores = {"?timo":"#4a7c59","bom":"#639922","aten??o":"#BA7517","cr?tico":"#E24B4A"};
+        const cores = {"ótimo":"#4a7c59","bom":"#639922","atenção":"#BA7517","crítico":"#E24B4A"};
         const cor   = cores[dados.estado] || "#888";
         const hora  = String(c[1]&&c[1].f ? c[1].f : c[1]&&c[1].v ? c[1].v : "").substring(0,5);
         const itemEl = document.createElement("div");
@@ -1043,21 +1083,21 @@ function carregarEventos() {
           </div>
           <div style="flex:1;min-width:0">
             <p class="file-name">${dados.ts||hora} ? Planta ${num}</p>
-            <p class="file-meta" style="color:${cor}">${(dados.estado||"--").charAt(0).toUpperCase()+(dados.estado||"--").slice(1)} ? ${dados.fase||"--"} ? ${dados.altura?dados.altura+"cm":"--"}</p>
+            <p class="file-meta" style="color:${cor}">${(dados.estado||"--").charAt(0).toUpperCase()+(dados.estado||"--").slice(1)} — ${dados.fase||"--"} — ${dados.altura?dados.altura+"cm":"--"}</p>
             <p class="file-meta" style="margin-top:2px">${dados.resumo?dados.resumo.substring(0,80)+"...":""}</p>
           </div>`;
         const lista = document.getElementById("analises-lista");
         if(lista.children.length < 6) lista.appendChild(itemEl);
         document.getElementById("analises-count").textContent =
-          lista.children.length + " an?lise" + (lista.children.length > 1 ? "s" : "");
+          lista.children.length + " análise" + (lista.children.length > 1 ? "s" : "");
       }
     }
 
     // Se n?o encontrou an?lises visuais, mostra mensagem
     const listaAn = document.getElementById("analises-lista");
     if(!listaAn.children.length) {
-      listaAn.innerHTML = '<p style="font-size:13px;color:var(--text-ter)">Nenhuma an?lise ainda. Use o app SmartGrow Vision.</p>';
-      document.getElementById("analises-count").textContent = "0 an?lises";
+      listaAn.innerHTML = '<p style="font-size:13px;color:var(--text-ter)">Nenhuma análise ainda. Use o app SmartGrow Vision.</p>';
+      document.getElementById("analises-count").textContent = "0 análises";
     }
 
     atualizarPlanta(0, 0);
@@ -1066,11 +1106,11 @@ function carregarEventos() {
 
     // Renderiza ?ltimos 8 eventos
     const icones = {
-      start_ciclo:"?", galao_cheio:"?", toggle_luz:"?",
-      desequilibrio_hidraulico:"??", dados_ciclo_P1:"?", dados_ciclo_P2:"?",
-      envio_manual:"?", analise_visual_P1:"?", analise_visual_P2:"?",
-      bomba_on:"?", bomba_off:"?", sensor_falho:"??", rega_remota:"?",
-      alerta_rega:"?", bomba_bloqueada:"?"
+      start_ciclo:"🌱", galao_cheio:"💧", toggle_luz:"💡",
+      desequilibrio_hidraulico:"⚠️", dados_ciclo_P1:"📊", dados_ciclo_P2:"📊",
+      envio_manual:"📤", analise_visual_P1:"📸", analise_visual_P2:"📸",
+      bomba_on:"💦", bomba_off:"⏹", sensor_falho:"⚠️", rega_remota:"🌊",
+      alerta_rega:"⚠️", bomba_bloqueada:"🔒"
     };
     const itens = rows.slice(0, 8).map(r => {
       const c    = r.c;
@@ -1099,7 +1139,7 @@ function carregarDados() {
   document.getElementById("sg-alerta-ia").innerHTML= "";
   // Limpa an?lises visuais para recarregar
   document.getElementById("analises-lista").innerHTML =
-    '<p style="font-size:13px;color:var(--text-ter)">Carregando an?lises...</p>';
+    '<p style="font-size:13px;color:var(--text-ter)">Carregando análises...</p>';
   document.getElementById("analises-count").textContent = "";
 
   fetch(DADOS_URL).then(r => r.text()).then(txt => {
@@ -1126,7 +1166,8 @@ function carregarDados() {
 
       return {
         ts,
-        dataCompleta: String(c[0]?(c[0].f||c[0].v||''):''), // timestamp completo para formatacao por janela
+        ts_date: parseGvizDate(c[0] && c[0].v), // Date real para filtragem por janela
+        dataCompleta: String(c[0]?(c[0].f||c[0].v||''):''),
         hora: ts,
         u1:       nv(c,2), u2:nv(c,3), media:nv(c,4), dif:nv(c,5),
         desequil: sv(c,6,"NAO"),
@@ -1151,7 +1192,7 @@ function carregarDados() {
       return g && !g.startsWith("Erro") && !g.startsWith("Rate") && !g.startsWith("?");
     });
 
-    if(!dados.length) throw new Error("Nenhum dado v?lido ainda. Aguarde o pr?ximo ciclo do ESP32.");
+    if(!dados.length) throw new Error("Nenhum dado válido ainda. Aguarde o próximo ciclo do ESP32.");
     todosOsDados = dados;
     const d  = dados[0];
     const fi = fatorInfo(d.fator);
@@ -1164,14 +1205,14 @@ function carregarDados() {
     // Alertas
     if(d.desequil === "SIM")
       document.getElementById("sg-warn").innerHTML =
-        `<div class="card-warn"><div class="warn-dot"></div><span style="font-size:13px">Desequil?brio hidr?ulico ? diferen?a de ${d.dif}% entre os vasos. Verifique o sistema de irriga??o.</span></div>`;
+        `<div class="card-warn"><div class="warn-dot"></div><span style="font-size:13px">Desequilíbrio hidráulico — diferença de ${d.dif}% entre os vasos. Verifique o sistema de irrigação.</span></div>`;
     if(d.alerta)
       document.getElementById("sg-alerta-ia").innerHTML =
         `<div class="card-warn"><div class="warn-dot"></div><span style="font-size:13px"><strong>IA:</strong> ${d.alerta}</span></div>`;
 
     // Diagn?stico
     document.getElementById("diag-text").textContent = d.diag;
-    document.getElementById("diag-ts").textContent   = `?ltima leitura ? ${d.hora||d.ts}`;
+    document.getElementById("diag-ts").textContent   = `Última leitura — ${d.hora||d.ts}`;
     if(d.motivo) {
       document.getElementById("sec-motivo").classList.remove("hidden");
       document.getElementById("motivo-text").textContent = d.motivo;
@@ -1190,14 +1231,14 @@ function carregarDados() {
     document.getElementById("m-med").innerHTML   = d.media.toFixed(1)+'<span class="metric-unit">%</span>';
     document.getElementById("m-vbase").innerHTML = d.vbase+'<span class="metric-unit">mL</span>';
     document.getElementById("m-vtotal").innerHTML= d.vtotal+'<span class="metric-unit">mL</span>';
-    // Novos sensores ? mostra "--" se n?o dispon?vel
+    // Novos sensores — mostra "--" se não disponível
     const fmtS = (v, unit, dec=1) => v!==null && v!==0
       ? v.toFixed(dec)+'<span class="metric-unit">'+unit+'</span>'
       : '<span style="color:var(--text-ter);font-size:11px">--</span>';
-    document.getElementById("m-temp").innerHTML      = fmtS(d.tempAr,    "?C");
+    document.getElementById("m-temp").innerHTML      = fmtS(d.tempAr,    "°C");
     document.getElementById("m-umid-ar").innerHTML   = fmtS(d.umidAr,    "%");
     document.getElementById("m-vpd").innerHTML       = fmtS(d.vpd,       "kPa", 2);
-    document.getElementById("m-temp-terra").innerHTML= fmtS(d.tempTerra, "?C");
+    document.getElementById("m-temp-terra").innerHTML= fmtS(d.tempTerra, "°C");
 
     atualizarLuz(d.fase, d.luzOn);
     atualizarPlanta(0, d.diasCiclo);
@@ -1206,7 +1247,7 @@ function carregarDados() {
     // Boia
     const ok = d.boia === 0;
     document.getElementById("boia-dot").className    = "dot " + (ok ? "dot-ok" : "dot-alert");
-    document.getElementById("boia-label").textContent = ok ? "N?vel adequado" : "ALERTA: N?vel baixo";
+    document.getElementById("boia-label").textContent = ok ? "Nível adequado" : "ALERTA: Nível baixo";
     document.getElementById("boia-ts").textContent    = `Atualizado: ${d.hora||d.ts}`;
 
     atualizarReservatorio(d.galaoMl, d.vbase, d.vtotal);
@@ -1218,7 +1259,7 @@ function carregarDados() {
     st.textContent = "Sem dados"; st.className = "badge badge-err";
     // Mant?m dados anteriores vis?veis ? n?o limpa a tela
     document.getElementById("sg-error").innerHTML =
-      `<div class="err-box">?? N?o foi poss?vel atualizar os dados. Exibindo ?ltima leitura dispon?vel. Erro: ${err.message}</div>`;
+      `<div class="err-box">⚠ Não foi possível atualizar os dados. Exibindo última leitura disponível. Erro: ${err.message}</div>`;
     carregarEventos();
   });
 }
@@ -1236,7 +1277,7 @@ carregarHistorico().then(historico => {
       <div style="display:flex;gap:16px;font-size:11px;color:var(--text-sec);flex-wrap:wrap">
         <span>Entrada: ${c.alturaEntrada||"--"}cm</span>
         <span>SmartGrow: ${c.diasSmartGrow} dias</span>
-        <span>Umid. m?dia: ${c.mediaUmidade}%</span>
+        <span>Umid. média: ${c.mediaUmidade}%</span>
         <span>${c.totalLeituras} leituras</span>
       </div>
     </div>`).join("");
@@ -1267,11 +1308,11 @@ function atualizarSubtituloConexao() {
     el.textContent = "Atualizado agora";
     el.style.color = "";
   } else if (minAtras < ESP32_TIMEOUT_MIN) {
-    el.textContent = `?ltima leitura: ${minAtras} min atr?s`;
+    el.textContent = `Última leitura: ${minAtras} min atrás`;
     el.style.color = "";
   } else {
     // ESP32 offline ? mais de 20 min sem dados
-    el.textContent = `?? Sem atualiza??o h? ${minAtras} min`;
+    el.textContent = `⚠ Sem atualização há ${minAtras} min`;
     el.style.color = "#f57f17";
     st.textContent = "Dispositivo offline";
     st.className   = "badge badge-offline";
@@ -1280,9 +1321,9 @@ function atualizarSubtituloConexao() {
     if (!errEl.innerHTML.includes("offline")) {
       errEl.innerHTML =
         `<div class="err-box" style="background:#fff8e1;border-color:#ffe082;color:#795548">
-          ?? O ESP32 est? offline ou sem internet h? ${minAtras} minutos.<br>
-          Os dados abaixo s?o da ?ltima leitura registrada ? o sistema pode estar operando
-          normalmente de forma aut?noma (rega e luz continuam funcionando localmente).
+          ⚠ O ESP32 está offline ou sem internet há ${minAtras} minutos.<br>
+          Os dados abaixo são da última leitura registrada — o sistema pode estar operando
+          normalmente de forma autônoma (rega e luz continuam funcionando localmente).
         </div>`;
     }
   }
@@ -1291,7 +1332,7 @@ function atualizarSubtituloConexao() {
 // ?? REGA REMOTA ??????????????????????????????????????????????
 function enviarRegaRemota() {
   const vol = parseInt(document.getElementById("rega-remota-vol").value);
-  if (!vol || vol < 50 || vol > 1000) { mostrarToast("Volume inv?lido. Use entre 50 e 1000 mL."); return; }
+  if (!vol || vol < 50 || vol > 1000) { mostrarToast("Volume inválido. Use entre 50 e 1000 mL."); return; }
   const btn    = document.getElementById("btn-rega-remota");
   const status = document.getElementById("rega-remota-status");
   const aviso  = document.getElementById("rega-remota-aviso");
@@ -1303,7 +1344,7 @@ function enviarRegaRemota() {
   }).then(r => {
     if (r.ok || r.type === "opaqueredirect" || r.status === 0) {
       status.textContent = "? Comando enviado!"; status.style.color = "var(--green)";
-      aviso.textContent = vol + "mL programados. O ESP32 executar? na pr?xima sincroniza??o (at? 15 min).";
+      aviso.textContent = vol + "mL programados. O ESP32 executar? na pr?xima sincronização (at? 15 min).";
       mostrarToast("Rega de " + vol + "mL agendada!");
     } else { throw new Error("HTTP " + r.status); }
   }).catch(() => {
@@ -1311,7 +1352,7 @@ function enviarRegaRemota() {
       body: JSON.stringify({ tipo: "rega_remota", volume_ml: vol })
     }).then(() => {
       status.textContent = "? Comando enviado!"; status.style.color = "var(--green)";
-      aviso.textContent = vol + "mL programados. O ESP32 executar? na pr?xima sincroniza??o (at? 15 min).";
+      aviso.textContent = vol + "mL programados. O ESP32 executar? na pr?xima sincronização (at? 15 min).";
       mostrarToast("Rega de " + vol + "mL agendada!");
     }).catch(() => {
       status.textContent = "? Falha ao enviar"; status.style.color = "var(--red)";
