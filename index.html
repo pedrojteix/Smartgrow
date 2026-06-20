@@ -314,6 +314,19 @@
   </div>
 
   <div class="sec">
+    <p class="lbl">Historico de Regas</p>
+    <div class="card" id="regas-card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <p class="drive-title">Cada rega por vaso</p>
+        <span style="font-size:11px;color:var(--text-ter)" id="regas-count">Carregando...</span>
+      </div>
+      <div id="regas-list" style="overflow-x:auto">
+        <p style="font-size:13px;color:var(--text-ter)">Carregando regas...</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
     <p class="lbl">An?lises Visuais</p>
     <div class="card" id="analises-visuais">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
@@ -413,6 +426,7 @@ const SHEET_ID  = "1cK0y2--PLGAo00W_UP4Ix53qcAVyQU9Na-uDlvNjYXo";
 const GAS_URL   = "https://script.google.com/macros/s/AKfycby56nn56erEcdsAG06Rg5wnkjVYau9uWnO73KT0MjMzk7uPJYujvms41aMHNYtu0IHt-A/exec";
 const DADOS_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=DADOS`;
 const EVTS_URL  = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=EVENTOS`;
+const REGAS_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=REGAS`;
 const GALAO_ML  = 7000;
 
 // ?? ESTADO GLOBAL ?????????????????????????????????????????????
@@ -424,6 +438,7 @@ let chartInst     = null;
 let janelaAtual   = 96; // 96 leituras = ~24h (4 leituras/h)
 let tipoChart     = 'solo'; // solo | umid_ar | temp_ar | pressao | temp_solo
 let todosOsDados  = [];
+let consumoDiarioMedio = 0; // mL/dia (media das regas dos ultimos 14 dias)
 let dadosCicloP1  = null;
 let dadosCicloP2  = null;
 
@@ -909,6 +924,89 @@ async function carregarHistorico() {
   } catch(e) { return []; }
 }
 
+// ?? REGAS ????????????????????????????????????????????????????
+// Recalcula a autonomia usando o consumo medio diario real das regas
+// dos ultimos 14 dias (substitui a estimativa por ultima rega).
+function atualizarAutonomia() {
+  if (consumoDiarioMedio <= 0) return; // sem historico -> mantem estimativa
+  const dias = Math.floor(galaoAtual / consumoDiarioMedio);
+  const litros = (galaoAtual / 1000).toFixed(1);
+  document.getElementById("aut-num").textContent  = dias;
+  document.getElementById("res-dias").textContent = dias + " dias";
+  document.getElementById("aut-meta").textContent =
+    litros + "L restantes · " + Math.round(consumoDiarioMedio) + "mL/dia (media 14d)";
+}
+
+function parseGvizData(v) {
+  if (!v) return null;
+  const m = String(v).match(/Date\((\d+),(\d+),(\d+),(\d+),(\d+),(\d+)\)/);
+  if (m) return new Date(+m[1], +m[2], +m[3], +m[4], +m[5], +m[6]);
+  const d = new Date(v);
+  return isNaN(d) ? null : d;
+}
+
+function carregarRegas() {
+  fetch(REGAS_URL).then(r => r.text()).then(txt => {
+    const json = JSON.parse(txt.replace(/^[^(]+\(|\);?$/g, ""));
+    const rows = (json.table.rows || []).filter(r => r.c && r.c[0] && r.c[0].v);
+    const nv = (c,i) => c[i]&&c[i].v!=null ? parseFloat(c[i].v)||0 : 0;
+    const sv = (c,i) => c[i]&&c[i].v!=null ? String(c[i].v) : "";
+
+    const regas = rows.map(r => {
+      const c = r.c;
+      const dt = parseGvizData(c[0] && c[0].v);
+      return {
+        dt,
+        data:    dt ? dt.toLocaleDateString("pt-BR") : "",
+        hora:    sv(c,1),
+        trigger: sv(c,2) || "auto",
+        vaso1:   nv(c,3), vaso2: nv(c,4), total: nv(c,5),
+        duracao: nv(c,6),
+      };
+    });
+
+    // Consumo medio diario dos ultimos 14 dias
+    const limite = Date.now() - 14 * 86400000;
+    const recentes = regas.filter(x => x.dt && x.dt.getTime() >= limite);
+    const soma = recentes.reduce((s,x) => s + x.total, 0);
+    consumoDiarioMedio = soma > 0 ? soma / 14 : 0;
+    atualizarAutonomia();
+
+    renderRegasTabela(regas.slice(0, 20));
+  }).catch(() => {
+    const el = document.getElementById("regas-list");
+    if (el) el.innerHTML = '<p style="font-size:13px;color:var(--text-ter)">Aba REGAS ainda nao criada. Aparece apos a primeira rega.</p>';
+  });
+}
+
+function renderRegasTabela(regas) {
+  const el  = document.getElementById("regas-list");
+  const cnt = document.getElementById("regas-count");
+  if (!regas.length) {
+    el.innerHTML = '<p style="font-size:13px;color:var(--text-ter)">Nenhuma rega registrada ainda.</p>';
+    if (cnt) cnt.textContent = "0 regas";
+    return;
+  }
+  const cores = { auto:"#639922", remota:"#378ADD", teste:"#BA7517", manual:"#888780" };
+  const th = (t,a) => `<th style="padding:6px 8px;text-align:${a};font-size:10px;color:var(--text-ter);text-transform:uppercase;letter-spacing:.05em">${t}</th>`;
+  const td = (v,a,extra="") => `<td style="padding:7px 8px;font-size:12px;font-family:'DM Mono',monospace;text-align:${a};${extra}">${v}</td>`;
+  const linhas = regas.map(r => {
+    const cor = cores[r.trigger] || "#888780";
+    return `<tr style="border-bottom:1px solid var(--border)">
+      ${td(r.data + " " + r.hora, "left", "color:var(--text-sec);white-space:nowrap")}
+      <td style="padding:7px 8px"><span style="font-size:10px;padding:2px 8px;border-radius:20px;background:${cor}22;color:${cor}">${r.trigger}</span></td>
+      ${td(r.vaso1 + "mL", "right")}
+      ${td(r.vaso2 + "mL", "right")}
+      ${td(r.total + "mL", "right", "font-weight:500")}
+    </tr>`;
+  }).join("");
+  el.innerHTML = `<table style="width:100%;border-collapse:collapse;min-width:380px">
+    <thead><tr style="border-bottom:1px solid var(--border-strong)">
+      ${th("Quando","left")}${th("Tipo","left")}${th("Vaso 1","right")}${th("Vaso 2","right")}${th("Total","right")}
+    </tr></thead><tbody>${linhas}</tbody></table>`;
+  if (cnt) cnt.textContent = regas.length + " rega" + (regas.length > 1 ? "s" : "");
+}
+
 // ?? EVENTOS ??????????????????????????????????????????????????
 function carregarEventos() {
   fetch(EVTS_URL).then(r => r.text()).then(txt => {
@@ -1114,6 +1212,7 @@ function carregarDados() {
     atualizarReservatorio(d.galaoMl, d.vbase, d.vtotal);
     renderChart(dados);
     carregarEventos();
+    carregarRegas();
 
   }).catch(err => {
     st.textContent = "Sem dados"; st.className = "badge badge-err";
