@@ -314,6 +314,15 @@
   </div>
 
   <div class="sec">
+    <p class="lbl">Hidráulica</p>
+    <div class="card">
+      <div id="hidraulica-stats">
+        <p style="font-size:13px;color:var(--text-ter)">Carregando análise...</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
     <p class="lbl">Historico de Regas</p>
     <div class="card" id="regas-card">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
@@ -439,6 +448,7 @@ let janelaAtual   = 96; // 96 leituras = ~24h (4 leituras/h)
 let tipoChart     = 'solo'; // solo | umid_ar | temp_ar | pressao | temp_solo
 let todosOsDados  = [];
 let consumoDiarioMedio = 0; // mL/dia (media das regas dos ultimos 14 dias)
+let todasAsRegas = [];
 let dadosCicloP1  = null;
 let dadosCicloP2  = null;
 
@@ -974,6 +984,141 @@ function atualizarAutonomia() {
     litros + "L restantes · " + Math.round(consumoDiarioMedio) + "mL/dia (media 14d)";
 }
 
+function renderHidraulica() {
+  const el = document.getElementById("hidraulica-stats");
+  if (!el) return;
+
+  const regas = todasAsRegas.filter(r => r.dt);
+  if (!regas.length) {
+    el.innerHTML = '<p style="font-size:13px;color:var(--text-ter)">Sem histórico de regas com data válida ainda.</p>';
+    return;
+  }
+
+  const fmtDur = (min) => {
+    if (min < 60) return Math.round(min) + 'min';
+    const h = Math.floor(min / 60), m = Math.round(min % 60);
+    return m > 0 ? h + 'h ' + m + 'min' : h + 'h';
+  };
+  const p2 = n => String(n).padStart(2,'0');
+
+  const sorted = [...regas].sort((a, b) => a.dt - b.dt);
+  const agora  = new Date();
+  const hoje   = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate());
+  const ini7d  = new Date(agora.getTime() - 7 * 86400000);
+
+  // Intervalos entre regas consecutivas (minutos)
+  const intervals = [];
+  for (let i = 1; i < sorted.length; i++)
+    intervals.push((sorted[i].dt - sorted[i-1].dt) / 60000);
+  const avgIntervalMin = intervals.length
+    ? intervals.reduce((s, v) => s + v, 0) / intervals.length : 0;
+
+  // Volume médio (últimas 14 regas)
+  const recentes = sorted.slice(-14);
+  const avgVol = recentes.reduce((s, r) => s + r.total, 0) / recentes.length;
+
+  // Hoje
+  const regasHoje = sorted.filter(r => r.dt >= hoje);
+  const volHoje   = regasHoje.reduce((s, r) => s + r.total, 0);
+
+  // Últimos 7 dias
+  const regas7d = sorted.filter(r => r.dt >= ini7d);
+  const vol7d   = regas7d.reduce((s, r) => s + r.total, 0);
+  const mediaDia7d = regas7d.length ? vol7d / 7 : 0;
+
+  // Última rega
+  const ultima = sorted[sorted.length - 1];
+  const minsDesdeUltima = (agora - ultima.dt) / 60000;
+  const ultimaLabel = ultima.data !== '—'
+    ? ultima.data + ' ' + ultima.hora
+    : ultima.hora;
+
+  // Análise de resposta do solo (correlaciona REGAS com DADOS)
+  let soilHTML = '';
+  if (todosOsDados.length >= 4 && sorted.length >= 2) {
+    const deltas = [], duracoes = [];
+    sorted.slice(-10).forEach(r => {
+      const rt = r.dt.getTime();
+      // leitura mais próxima antes da rega (até 30 min antes)
+      const antes = todosOsDados
+        .filter(d => d.ts_date && d.ts_date.getTime() < rt && d.ts_date.getTime() > rt - 30 * 60000)
+        .sort((a, b) => b.ts_date - a.ts_date)[0];
+      // leituras até 3h depois da rega
+      const depois = todosOsDados
+        .filter(d => d.ts_date && d.ts_date.getTime() > rt && d.ts_date.getTime() < rt + 3 * 3600000)
+        .sort((a, b) => a.ts_date - b.ts_date);
+      if (!antes || !depois.length) return;
+      const preVal = antes.media;
+      const pico   = Math.max(...depois.map(d => d.media));
+      if (preVal > 0 && pico > preVal + 3) {
+        deltas.push(pico - preVal);
+        // tempo até voltar ao nível pré-rega (±3%)
+        const retorno = depois.find(d => d.media <= preVal + 3);
+        if (retorno) duracoes.push((retorno.ts_date.getTime() - rt) / 60000);
+      }
+    });
+
+    if (deltas.length >= 2) {
+      const avgDelta = deltas.reduce((s, v) => s + v, 0) / deltas.length;
+      const durLabel = duracoes.length
+        ? fmtDur(duracoes.reduce((s, v) => s + v, 0) / duracoes.length) : null;
+      soilHTML = `
+        <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border)">
+          <p style="font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-ter);margin-bottom:8px">Resposta do solo após rega</p>
+          <div style="display:flex;gap:24px;flex-wrap:wrap">
+            <div>
+              <p style="font-size:20px;font-weight:700;color:var(--accent)">+${avgDelta.toFixed(0)}%</p>
+              <p style="font-size:11px;color:var(--text-ter)">elevação média da umidade</p>
+            </div>
+            ${durLabel ? `<div>
+              <p style="font-size:20px;font-weight:700;color:var(--text)">~${durLabel}</p>
+              <p style="font-size:11px;color:var(--text-ter)">tempo médio para secar</p>
+            </div>` : ''}
+            <div>
+              <p style="font-size:20px;font-weight:700;color:var(--text)">${deltas.length} regas</p>
+              <p style="font-size:11px;color:var(--text-ter)">analisadas (últ. 10)</p>
+            </div>
+          </div>
+        </div>`;
+    }
+  }
+
+  el.innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px 24px">
+      <div>
+        <p style="font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-ter);margin-bottom:2px">Intervalo médio</p>
+        <p style="font-size:22px;font-weight:700;color:var(--text)">${avgIntervalMin ? fmtDur(avgIntervalMin) : '—'}</p>
+        <p style="font-size:11px;color:var(--text-ter)">entre regas (histórico geral)</p>
+      </div>
+      <div>
+        <p style="font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-ter);margin-bottom:2px">Volume médio</p>
+        <p style="font-size:22px;font-weight:700;color:var(--text)">${Math.round(avgVol)}mL</p>
+        <p style="font-size:11px;color:var(--text-ter)">por rega (últ. 14 regas)</p>
+      </div>
+      <div>
+        <p style="font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-ter);margin-bottom:2px">Hoje</p>
+        <p style="font-size:22px;font-weight:700;color:var(--text)">${regasHoje.length} rega${regasHoje.length !== 1 ? 's' : ''}</p>
+        <p style="font-size:11px;color:var(--text-ter)">${Math.round(volHoje)}mL consumidos</p>
+      </div>
+      <div>
+        <p style="font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-ter);margin-bottom:2px">Últimos 7 dias</p>
+        <p style="font-size:22px;font-weight:700;color:var(--text)">${regas7d.length} regas</p>
+        <p style="font-size:11px;color:var(--text-ter)">${(vol7d / 1000).toFixed(2)}L · ${Math.round(mediaDia7d)}mL/dia</p>
+      </div>
+    </div>
+    <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+      <div>
+        <p style="font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-ter);margin-bottom:1px">Última rega</p>
+        <p style="font-size:13px;font-weight:500;color:var(--text)">${ultimaLabel} · ${Math.round(ultima.total)}mL</p>
+      </div>
+      <div style="text-align:right">
+        <p style="font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-ter);margin-bottom:1px">Há quanto tempo</p>
+        <p style="font-size:13px;font-weight:500;color:var(--text)">${fmtDur(minsDesdeUltima)}</p>
+      </div>
+    </div>
+    ${soilHTML}`;
+}
+
 
 function carregarRegas() {
   fetch(REGAS_URL).then(r => r.text()).then(txt => {
@@ -1013,7 +1158,9 @@ function carregarRegas() {
     const recentes = regas.filter(x => x.dt && x.dt.getTime() >= limite);
     const soma = recentes.reduce((s,x) => s + x.total, 0);
     consumoDiarioMedio = soma > 0 ? soma / 14 : 0;
+    todasAsRegas = regas;
     atualizarAutonomia();
+    renderHidraulica();
 
     renderRegasTabela(regas.slice(0, 20));
   }).catch(() => {
@@ -1258,7 +1405,8 @@ function carregarDados() {
     atualizarReservatorio(d.galaoMl, d.vbase, d.vtotal);
     renderChart(dados);
     carregarEventos();
-    carregarRegas();
+    carregarRegas(); // vai chamar renderHidraulica() após carregar regas
+    renderHidraulica(); // atualiza análise do solo assim que DADOS chegam
 
   }).catch(err => {
     st.textContent = "Sem dados"; st.className = "badge badge-err";
