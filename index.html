@@ -699,9 +699,9 @@ function renderChart(dados) {
   let slice;
 
   if (janelaAtual <= 96) {
-    // Hoje: desde meia-noite local
-    const meianoite = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate());
-    slice = dados.filter(d => d.ts_date && d.ts_date >= meianoite);
+    // Hoje: últimas 24h (janela deslizante, evita corte na virada do dia)
+    const ini24h = new Date(agora.getTime() - 24 * 3600000);
+    slice = dados.filter(d => d.ts_date && d.ts_date >= ini24h);
     if (!slice.length) slice = dados.slice(0, 96); // fallback sem ts_date
   } else if (janelaAtual <= 672) {
     const inicio = new Date(agora.getTime() - 7 * 86400000);
