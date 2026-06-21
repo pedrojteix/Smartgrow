@@ -715,17 +715,19 @@ function renderChart(dados) {
     if (!dt) return d.ts; // fallback legado
 
     if (janelaAtual <= 96) {
-      // Hoje: label só na virada de hora exata (minuto == 0)
-      return dt.getMinutes() === 0
-        ? String(dt.getHours()).padStart(2,'0') + ':00'
-        : '';
-    } else if (janelaAtual >= 9999) {
-      // Tudo: label na virada de mês
-      if (i === 0) return pad2(dt.getMonth()+1)+'/'+dt.getFullYear();
+      // Hoje: label na virada de hora (hora mudou em relação ao ponto anterior)
+      if (i === 0) return pad2(dt.getHours()) + ':00';
       const prev = slice[i-1].ts_date;
       if (!prev) return '';
-      return (prev.getMonth()!==dt.getMonth() || prev.getFullYear()!==dt.getFullYear())
-        ? pad2(dt.getMonth()+1)+'/'+dt.getFullYear() : '';
+      return prev.getHours() !== dt.getHours() ? pad2(dt.getHours()) + ':00' : '';
+    } else if (janelaAtual >= 9999) {
+      // Tudo: label no dia 1 e dia 16 de cada mês (a cada ~15 dias)
+      const day = dt.getDate();
+      if (day !== 1 && day !== 16) return '';
+      if (i === 0) return pad2(day)+'/'+pad2(dt.getMonth()+1);
+      const prev = slice[i-1].ts_date;
+      if (!prev) return '';
+      return prev.getDate() !== day ? pad2(day)+'/'+pad2(dt.getMonth()+1) : '';
     } else {
       // 7d / 14d: label na virada de dia
       if (i === 0) return pad2(dt.getDate())+'/'+pad2(dt.getMonth()+1);
@@ -981,11 +983,14 @@ function carregarRegas() {
     const sv = (c,i) => c[i]&&c[i].v!=null ? String(c[i].v) : "";
     const TRIGGERS_VALIDOS = ["auto","remota","teste","manual"];
 
+    const p2 = n => String(n).padStart(2,'0');
     const regas = rows.map(r => {
       const c = r.c;
       // Parseia timestamp do gviz; ano 1899 = coluna salva como Hora-apenas no Sheets
       const dt = parseGvizDate(c[0] && c[0].v);
       const dtValido = dt && dt.getFullYear() > 2000;
+      // Extrai HH:MM do próprio gviz mesmo quando a data base é 1899
+      const horaStr = dt ? p2(dt.getHours())+':'+p2(dt.getMinutes()) : sv(c,1);
       const vaso1 = nv(c,3);
       const vaso2 = nv(c,4);
       // Recalcula total sempre (dado c[5] pode estar errado em dados legados)
@@ -996,7 +1001,7 @@ function carregarRegas() {
       return {
         dt: dtValido ? dt : null,
         data: dtValido ? dt.toLocaleDateString("pt-BR") : "—",
-        hora: sv(c,1), // coluna Hora = HH:MM sempre disponível
+        hora: horaStr,
         trigger,
         vaso1, vaso2, total,
         duracao: nv(c,6),
