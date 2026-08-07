@@ -1,0 +1,1114 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SmartGrow — Monitor de Cultivo</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&family=DM+Mono:wght@400;500&display=swap');
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  :root{--green:#4a7c59;--green-light:#e8f2eb;--green-mid:#639922;--amber:#BA7517;--red:#E24B4A;--blue:#378ADD;--gray:#888780;--text:#1a1a18;--text-sec:#6b6b67;--text-ter:#9e9e9a;--bg:#fafaf8;--surface:#fff;--border:rgba(0,0,0,0.08);--border-strong:rgba(0,0,0,0.14);--radius:12px;--radius-sm:8px}
+  body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(--text)}
+  .header{background:var(--surface);border-bottom:1px solid var(--border);padding:0 24px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+  .h-logo{display:flex;align-items:center;gap:10px}
+  .h-title{font-size:15px;font-weight:500;margin:0}.h-sub{font-size:11px;color:var(--text-sec);margin:0}
+  .badge{font-size:11px;padding:3px 10px;border-radius:20px;font-weight:500}
+  .badge-live{background:#e8f5e9;color:#2e7d32}.badge-load{background:#f5f5f5;color:var(--text-sec)}.badge-err{background:#ffebee;color:#c62828}.badge-offline{background:#fff8e1;color:#f57f17}
+  .btn{font-size:12px;font-family:inherit;cursor:pointer;border:1px solid var(--border-strong);background:transparent;color:var(--text-sec);padding:5px 14px;border-radius:20px;transition:background .15s}
+  .btn:hover{background:var(--green-light);color:var(--green);border-color:var(--green)}
+  .btn-primary{background:var(--green);color:#fff;border:none;font-size:12px;font-family:inherit;cursor:pointer;padding:8px 20px;border-radius:20px}
+  .btn-primary:hover{background:#3d6b4b}
+  .main{max-width:800px;margin:0 auto;padding:24px 16px 60px}
+  .lbl{font-size:10px;font-weight:500;color:var(--text-ter);text-transform:uppercase;letter-spacing:.08em;margin:0 0 8px}
+  .sec{margin-bottom:20px}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px}
+  .card-surf{background:#f4f4f1;border-radius:var(--radius);padding:16px 20px}
+  .card-warn{background:#fff8e1;border:1px solid #ffe082;border-radius:var(--radius);padding:12px 16px;display:flex;align-items:center;gap:10px;margin-bottom:12px}
+  .warn-dot{width:8px;height:8px;border-radius:50%;background:#f57f17;flex-shrink:0}
+  .top-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px}
+  @media(max-width:520px){.top-grid{grid-template-columns:1fr}}
+  .aut-num{font-size:44px;font-weight:500;line-height:1;font-family:'DM Mono',monospace}
+  .aut-unit{font-size:12px;color:var(--text-sec);margin:3px 0 10px}
+  .bar-bg{height:3px;background:var(--border-strong);border-radius:2px;overflow:hidden;margin-bottom:5px}
+  .bar-fill{height:3px;border-radius:2px;transition:width .5s}
+  .aut-meta{font-size:11px;color:var(--text-ter)}
+  .btn-link{font-size:11px;color:var(--blue);cursor:pointer;border:none;background:none;padding:0;margin-top:8px;display:block;font-family:inherit}
+  .btn-link:hover{text-decoration:underline}
+  .fator-card{display:flex;align-items:center;gap:18px}
+  .fator-num{font-size:40px;font-weight:500;min-width:60px;font-family:'DM Mono',monospace}
+  .fator-bar-bg{height:4px;background:#ebebeb;border-radius:2px;overflow:hidden}
+  .fator-bar-fill{height:4px;border-radius:2px;transition:width .5s}
+  .fator-scale{display:flex;justify-content:space-between;font-size:10px;color:var(--text-ter);margin-top:4px}
+  .fator-desc{font-size:12px;color:var(--text-sec);margin-top:5px}
+  .metrics{display:flex;gap:10px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none}
+  .metrics::-webkit-scrollbar{display:none}
+  .metric{background:#f4f4f1;border-radius:var(--radius-sm);padding:12px 16px;min-width:116px;flex-shrink:0}
+  .metric-lbl{font-size:11px;color:var(--text-sec);margin-bottom:5px}
+  .metric-val{font-size:22px;font-weight:500;font-family:'DM Mono',monospace}
+  .metric-unit{font-size:12px;color:var(--text-sec);font-weight:400;font-family:'DM Sans',sans-serif}
+  .metric-soon{border:1px dashed var(--border-strong);opacity:.45}
+  .luz-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+  .luz-item{background:#f4f4f1;border-radius:var(--radius-sm);padding:12px 14px}
+  .luz-val{font-size:18px;font-weight:500;font-family:'DM Mono',monospace;margin-top:4px}
+  .plantas-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:420px){.plantas-grid{grid-template-columns:1fr}}
+  .planta-nome{font-size:13px;font-weight:500;margin-bottom:2px}
+  .planta-dias{font-size:11px;color:var(--text-sec);margin-bottom:8px}
+  .fase-pills{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px}
+  .pill{font-size:10px;padding:3px 10px;border-radius:20px;border:1px solid var(--border-strong);color:var(--text-sec);cursor:pointer;background:transparent;font-family:inherit;transition:all .15s}
+  .pill.ativa{background:var(--green-mid);color:#fff;border-color:var(--green-mid)}
+  .planta-info{font-size:11px;color:var(--text-sec)}
+  .ciclo-info{font-size:10px;color:var(--text-ter);margin-top:6px;line-height:1.6}
+  .btn-colheita{font-size:10px;padding:3px 10px;border-radius:20px;border:1px solid var(--border-strong);color:var(--red);cursor:pointer;background:transparent;font-family:inherit;margin-top:8px;transition:all .15s}
+  .btn-colheita:hover{background:#ffebee;border-color:var(--red)}
+  .chart-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+  .legend{display:flex;gap:14px;font-size:11px;color:var(--text-sec)}
+  .legend span{display:flex;align-items:center;gap:5px}
+  .ldot{width:10px;height:3px;border-radius:2px;display:inline-block}
+  .jbtns{display:flex;gap:4px}
+  .jbtn{font-size:11px;padding:3px 9px;border-radius:20px;border:1px solid var(--border-strong);background:transparent;color:var(--text-sec);cursor:pointer;font-family:inherit;transition:all .15s}
+  .jbtn.ativo{background:var(--text);color:#fff;border-color:var(--text)}
+  .reserv-grid{display:grid;grid-template-columns:1fr auto 1fr;gap:16px;align-items:center}
+  @media(max-width:420px){.reserv-grid{grid-template-columns:1fr}}
+  .reserv-val{font-size:20px;font-weight:500;font-family:'DM Mono',monospace;margin:0}
+  .reserv-lbl{font-size:11px;color:var(--text-sec);margin:2px 0 0}
+  .pct-wrap{position:relative;width:80px;height:80px}
+  .pct-label{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:17px;font-weight:500;font-family:'DM Mono',monospace}
+  .reserv-bottom{display:flex;align-items:center;justify-content:space-between;margin-top:14px;padding-top:12px;border-top:1px solid var(--border)}
+  .dot{width:7px;height:7px;border-radius:50%}.dot-ok{background:var(--green-mid)}.dot-alert{background:var(--red)}
+  .drive-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:520px){.drive-grid{grid-template-columns:1fr}}
+  .drive-title{font-size:13px;font-weight:500;margin:0}
+  .file-row{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--border)}
+  .file-row:last-child{border-bottom:none;padding-bottom:0}
+  .foto-thumb{width:44px;height:44px;border-radius:7px;background:#e8f2eb;border:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center}
+  .file-name{font-size:12px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:0}
+  .file-meta{font-size:10px;color:var(--text-ter);margin:2px 0 0}
+  .pdf-thumb{width:44px;height:54px;border-radius:5px;background:#fff;border:1px solid var(--border-strong);flex-shrink:0;display:flex;flex-direction:column;overflow:hidden;position:relative}
+  .pdf-top{height:36px;background:#fafafa;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:center}
+  .pdf-badge{position:absolute;bottom:3px;left:50%;transform:translateX(-50%);font-size:7px;font-weight:500;color:#A32D2D;letter-spacing:.05em}
+  .pdf-lines{padding:3px 5px;display:flex;flex-direction:column;gap:2px}
+  .pdf-line{height:1.5px;background:#ddd;border-radius:1px}.pdf-line:last-child{width:70%}
+  .evento-row{display:flex;gap:12px;padding:8px 0;border-bottom:1px solid var(--border);align-items:flex-start}
+  .evento-row:last-child{border-bottom:none}
+  .evento-hora{font-size:11px;color:var(--text-ter);font-family:'DM Mono',monospace;min-width:48px;margin-top:2px}
+  .evento-tipo{font-size:11px;font-weight:500;color:var(--text)}
+  .evento-desc{font-size:11px;color:var(--text-sec)}
+  .err-box{background:#fff5f5;border:1px solid #ffcdd2;border-radius:var(--radius-sm);padding:12px 16px;font-size:13px;color:#c62828;margin-bottom:16px}
+  .form-row{margin-bottom:8px}
+  .form-label{font-size:10px;color:var(--text-ter);display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:.05em}
+  .form-input{width:100%;border:1px solid var(--border-strong);border-radius:var(--radius-sm);padding:6px 10px;font-size:12px;font-family:inherit;background:var(--bg);color:var(--text);outline:none}
+  .form-input:focus{border-color:var(--green);box-shadow:0 0 0 2px var(--green-light)}
+  .hidden{display:none}
+</style>
+
+</head>
+<body>
+
+<header class="header">
+  <div class="h-logo">
+    <svg width="26" height="26" viewBox="0 0 26 26" fill="none"><circle cx="13" cy="13" r="12.5" stroke="#4a7c59" stroke-opacity=".4"/><path d="M13 21C13 21 7.5 16.5 7.5 11.5C7.5 8.46 10.01 6 13 6C15.99 6 18.5 8.46 18.5 11.5C18.5 16.5 13 21 13 21Z" fill="#4a7c59" opacity=".15" stroke="#4a7c59" stroke-width="1"/><line x1="13" y1="21" x2="13" y2="11" stroke="#4a7c59" stroke-width="1" stroke-dasharray="1.5 1.5"/><circle cx="13" cy="11" r="1.5" fill="#4a7c59"/></svg>
+    <div><p class="h-title">SmartGrow</p><p class="h-sub" id="h-ultima-atualizacao">Monitor de Cultivo</p></div>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px">
+    <span class="badge badge-load" id="sg-status">Carregando...</span>
+    <button class="btn" onclick="carregarDados()">Atualizar</button>
+  </div>
+</header>
+
+<main class="main">
+  <div id="sg-error"></div>
+  <div id="sg-warn"></div>
+  <div id="sg-alerta-ia"></div>
+<main class="main">
+  <div id="sg-error"></div>
+  <div id="sg-warn"></div>
+  <div id="sg-alerta-ia"></div>
+
+  <div class="top-grid">
+    <div class="card-surf">
+      <p class="lbl">Autonomia</p>
+      <p class="aut-num" id="aut-num">--</p>
+      <p class="aut-unit">dias restantes</p>
+      <div class="bar-bg"><div class="bar-fill" id="aut-bar" style="width:0%"></div></div>
+      <p class="aut-meta" id="aut-meta">Calculando...</p>
+      <button class="btn-link" onclick="resetGalao()">Galão reabastecido (7L) →</button>
+    </div>
+    <div class="card" style="display:flex;flex-direction:column">
+      <p class="lbl">Diagnóstico IA</p>
+      <p style="font-size:14px;font-weight:500;margin:0 0 auto;line-height:1.4" id="diag-text">Carregando...</p>
+      <p style="font-size:11px;color:var(--text-ter);margin:8px 0 0" id="diag-ts">—</p>
+    </div>
+  </div>
+
+  <div class="sec hidden" id="sec-motivo">
+    <div class="card" style="padding:12px 16px">
+      <p class="lbl" style="margin-bottom:4px">Motivo da decisão da IA</p>
+      <p style="font-size:12px;color:var(--text-sec);line-height:1.5" id="motivo-text">—</p>
+    </div>
+  </div>
+
+  <div class="sec">
+    <p class="lbl">Fator de Rega</p>
+    <div class="card">
+      <div class="fator-card">
+        <p class="fator-num" id="fator-num">--</p>
+        <div style="flex:1">
+          <div class="fator-bar-bg"><div class="fator-bar-fill" id="fator-bar" style="width:0%"></div></div>
+          <div class="fator-scale"><span>0.0</span><span>0.5</span><span>1.0</span><span>1.5</span><span>2.0</span></div>
+          <p class="fator-desc" id="fator-desc">—</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <p class="lbl">Sensores — deslize para ver mais</p>
+    <div class="metrics">
+      <div class="metric"><p class="metric-lbl">Vaso 1</p><p class="metric-val" id="m-u1">--<span class="metric-unit">%</span></p></div>
+      <div class="metric"><p class="metric-lbl">Vaso 2</p><p class="metric-val" id="m-u2">--<span class="metric-unit">%</span></p></div>
+      <div class="metric"><p class="metric-lbl">Média</p><p class="metric-val" id="m-med">--<span class="metric-unit">%</span></p></div>
+      <div class="metric"><p class="metric-lbl">Vol/vaso</p><p class="metric-val" id="m-vbase">--<span class="metric-unit">mL</span></p></div>
+      <div class="metric"><p class="metric-lbl">Vol total</p><p class="metric-val" id="m-vtotal">--<span class="metric-unit">mL</span></p></div>
+      <div class="metric"><p class="metric-lbl">Temp Ar</p><p class="metric-val" id="m-temp"><span style="color:var(--text-ter);font-size:11px">--</span></p></div>
+      <div class="metric"><p class="metric-lbl">Umid Ar</p><p class="metric-val" id="m-umid-ar"><span style="color:var(--text-ter);font-size:11px">--</span></p></div>
+      <div class="metric"><p class="metric-lbl">VPD</p><p class="metric-val" id="m-vpd"><span style="color:var(--text-ter);font-size:11px">--</span></p></div>
+      <div class="metric"><p class="metric-lbl">Temp Terra</p><p class="metric-val" id="m-temp-terra"><span style="color:var(--text-ter);font-size:11px">--</span></p></div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <p class="lbl">Iluminação</p>
+    <div class="card">
+      <div class="luz-grid">
+        <div class="luz-item">
+          <p class="metric-lbl">Status atual</p>
+          <p class="luz-val" id="luz-status">--</p>
+          <span style="font-size:10px;padding:2px 8px;border-radius:20px;display:inline-block;margin-top:6px" id="luz-badge">--</span>
+        </div>
+        <div class="luz-item">
+          <p class="metric-lbl">Fase / horário</p>
+          <p class="luz-val" id="luz-fase">--</p>
+          <p style="font-size:11px;color:var(--text-sec);margin-top:4px" id="luz-horario">--</p>
+        </div>
+        <div class="luz-item">
+          <p class="metric-lbl">Ciclo</p>
+          <p class="luz-val" id="luz-ciclo">--</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <p class="lbl">Plantas</p>
+    <div class="plantas-grid">
+      <div class="card">
+        <p class="planta-nome">Planta 1 — Vaso 1</p>
+        <p class="planta-dias" id="dias-p1">Ciclo não iniciado</p>
+        <div class="fase-pills" id="fase-p1">
+          <button class="pill" onclick="setFase(0,'Germinação')">Germinação</button>
+          <button class="pill ativa" onclick="setFase(0,'Vegetação')">Vegetação</button>
+          <button class="pill" onclick="setFase(0,'Floração')">Floração</button>
+        </div>
+        <p class="planta-info" id="info-p1">Fase atual: <strong>Vegetação</strong></p>
+        <div class="ciclo-info" id="ciclo-p1"></div>
+        <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">
+          <button class="btn-colheita" style="color:var(--blue);border-color:var(--blue)" onclick="toggleForm(1)">Inserir dados →</button>
+          <button class="btn-colheita" onclick="colherPlanta(1)">Registrar colheita →</button>
+        </div>
+        <div id="form-p1" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
+          <div class="form-row"><label class="form-label">Germinação</label><input class="form-input" type="date" id="p1-germ"></div>
+          <div class="form-row"><label class="form-label">Primeiro vaso (potinho)</label><input class="form-input" type="date" id="p1-vaso1"></div>
+          <div class="form-row"><label class="form-label">Altura ao entrar no SmartGrow (cm)</label><input class="form-input" type="number" id="p1-altura" placeholder="ex: 18" min="0" max="200"></div>
+          <div class="form-row"><label class="form-label">Entrada no SmartGrow (vaso 11L)</label><input class="form-input" type="date" id="p1-smartgrow"></div>
+          <button class="btn-primary" style="margin-top:8px;width:100%" onclick="salvarDadosPlanta(1)">Salvar</button>
+        </div>
+      </div>
+      <div class="card">
+        <p class="planta-nome">Planta 2 — Vaso 2</p>
+        <p class="planta-dias" id="dias-p2">Ciclo não iniciado</p>
+        <div class="fase-pills" id="fase-p2">
+          <button class="pill" onclick="setFase(1,'Germinação')">Germinação</button>
+          <button class="pill ativa" onclick="setFase(1,'Vegetação')">Vegetação</button>
+          <button class="pill" onclick="setFase(1,'Floração')">Floração</button>
+        </div>
+        <p class="planta-info" id="info-p2">Fase atual: <strong>Vegetação</strong></p>
+        <div class="ciclo-info" id="ciclo-p2"></div>
+        <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">
+          <button class="btn-colheita" style="color:var(--blue);border-color:var(--blue)" onclick="toggleForm(2)">Inserir dados →</button>
+          <button class="btn-colheita" onclick="colherPlanta(2)">Registrar colheita →</button>
+        </div>
+        <div id="form-p2" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
+          <div class="form-row"><label class="form-label">Germinação</label><input class="form-input" type="date" id="p2-germ"></div>
+          <div class="form-row"><label class="form-label">Primeiro vaso (potinho)</label><input class="form-input" type="date" id="p2-vaso1"></div>
+          <div class="form-row"><label class="form-label">Altura ao entrar no SmartGrow (cm)</label><input class="form-input" type="number" id="p2-altura" placeholder="ex: 16" min="0" max="200"></div>
+          <div class="form-row"><label class="form-label">Entrada no SmartGrow (vaso 11L)</label><input class="form-input" type="date" id="p2-smartgrow"></div>
+          <button class="btn-primary" style="margin-top:8px;width:100%" onclick="salvarDadosPlanta(2)">Salvar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="card">
+      <div class="chart-header">
+        <div class="legend">
+          <span><span class="ldot" style="background:#378ADD"></span>Vaso 1</span>
+          <span><span class="ldot" style="background:#639922"></span>Vaso 2</span>
+          <span><span class="ldot" style="background:#888780"></span>Média</span>
+        </div>
+        <div class="jbtns">
+          <button class="jbtn ativo" onclick="setJanela(this,96)">Hoje</button>
+          <button class="jbtn" onclick="setJanela(this,672)">7d</button>
+          <button class="jbtn" onclick="setJanela(this,1344)">14d</button>
+          <button class="jbtn" onclick="setJanela(this,9999)">Tudo</button>
+        </div>
+      </div>
+      <div style="position:relative;height:220px">
+        <canvas id="sg-chart" role="img" aria-label="Histórico de umidade dos dois vasos">Histórico de umidade.</canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <p class="lbl">Reservatório</p>
+    <div class="card">
+      <div class="reserv-grid">
+        <div>
+          <p class="reserv-val" id="res-litros">--L</p>
+          <p class="reserv-lbl">volume atual</p>
+          <p class="reserv-val" style="margin-top:10px" id="res-dias">--</p>
+          <p class="reserv-lbl">dias de autonomia</p>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+          <div class="pct-wrap">
+            <svg width="80" height="80" viewBox="0 0 80 80">
+              <circle cx="40" cy="40" r="33" fill="none" stroke="#ebebeb" stroke-width="5"/>
+              <circle cx="40" cy="40" r="33" fill="none" stroke="#639922" stroke-width="5" stroke-dasharray="207.3" id="res-arc" stroke-dashoffset="52" stroke-linecap="round" transform="rotate(-90 40 40)"/>
+            </svg>
+            <span class="pct-label" id="res-pct">--</span>
+          </div>
+          <p style="font-size:11px;color:var(--text-ter)">de 7L</p>
+        </div>
+        <div style="text-align:right">
+          <p class="reserv-val" id="res-vaso">--mL</p>
+          <p class="reserv-lbl">por vaso / rega</p>
+          <p class="reserv-val" style="margin-top:8px" id="res-total">--mL</p>
+          <p class="reserv-lbl">total sistema (×2)</p>
+          <button class="btn-link" style="text-align:right;margin-top:10px" onclick="resetGalao()">Galão reabastecido →</button>
+        </div>
+      </div>
+      <div class="reserv-bottom">
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="dot dot-ok" id="boia-dot"></div>
+          <span style="font-size:13px" id="boia-label">—</span>
+        </div>
+        <span style="font-size:11px;color:var(--text-ter)" id="boia-ts">—</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <p class="lbl">Análises Visuais</p>
+    <div class="card" id="analises-visuais">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <p class="drive-title">Relatórios por foto</p>
+        <span style="font-size:11px;color:var(--text-ter)" id="analises-count">Carregando...</span>
+      </div>
+      <div id="analises-lista"></div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <p class="lbl">Últimos Eventos</p>
+    <div class="card" id="eventos-list">
+      <p style="font-size:13px;color:var(--text-ter)">Carregando eventos...</p>
+    </div>
+  </div>
+
+  <!-- ── REGA REMOTA ──────────────────────────────────────── -->
+  <div class="sec">
+    <p class="lbl">Rega Remota</p>
+    <div class="card">
+      <p style="font-size:12px;color:var(--text-sec);margin-bottom:14px;line-height:1.5">
+        Envia um comando de rega ao ESP32. O sistema executa na próxima sincronização (até 15 min).
+        Use quando quiser acionar manualmente pelo celular.
+      </p>
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <div>
+          <label class="form-label">Volume total (mL)</label>
+          <input type="number" id="rega-remota-vol" class="form-input"
+            value="200" min="50" max="1000" step="50"
+            style="width:120px">
+        </div>
+        <div style="margin-top:18px">
+          <button class="btn-primary" id="btn-rega-remota" onclick="enviarRegaRemota()">
+            💧 Regar agora
+          </button>
+        </div>
+        <div style="margin-top:18px">
+          <span id="rega-remota-status" style="font-size:12px;color:var(--text-ter)"></span>
+        </div>
+      </div>
+      <p style="font-size:10px;color:var(--text-ter);margin-top:10px" id="rega-remota-aviso"></p>
+    </div>
+  </div>
+
+  <div class="sec" id="sec-historico" style="display:none">
+    <p class="lbl">Histórico de Ciclos</p>
+    <div class="card" id="historico-list">
+      <p style="font-size:13px;color:var(--text-ter)">Carregando histórico...</p>
+    </div>
+  </div>
+</main>
+
+</main>
+
+<script>
+// ── CONFIG ────────────────────────────────────────────────────
+const SHEET_ID  = "1cK0y2--PLGAo00W_UP4Ix53qcAVyQU9Na-uDlvNjYXo";
+const GAS_URL   = "https://script.google.com/macros/s/AKfycby56nn56erEcdsAG06Rg5wnkjVYau9uWnO73KT0MjMzk7uPJYujvms41aMHNYtu0IHt-A/exec";
+const DADOS_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=DADOS`;
+const EVTS_URL  = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=EVENTOS`;
+const GALAO_ML  = 7000;
+
+// ── ESTADO GLOBAL ─────────────────────────────────────────────
+const ESP32_TIMEOUT_MIN = 20; // minutos sem dados = ESP32 offline
+let galaoAtual    = 7000;
+let ultimaLeituraTs = null; // Date object da última leitura recebida
+let timerStatusESP32 = null;
+let chartInst     = null;
+let janelaAtual   = 96; // 96 leituras = ~24h (4 leituras/h)
+let todosOsDados  = [];
+let dadosCicloP1  = null;
+let dadosCicloP2  = null;
+
+// Carrega dados do ciclo do localStorage imediatamente
+try { const v=localStorage.getItem("sg_ciclo_p1"); if(v) dadosCicloP1=JSON.parse(v); } catch(e){}
+try { const v=localStorage.getItem("sg_ciclo_p2"); if(v) dadosCicloP2=JSON.parse(v); } catch(e){}
+
+const FASES_LUZ = {
+  germinacao:{h:17,liga:7,desliga:0},
+  vegetacao: {h:17,liga:7,desliga:0},
+  floracao:  {h:12,liga:8,desliga:20},
+};
+const FASE_NOMES = {germinacao:"Germinação",vegetacao:"Vegetação",floracao:"Floração"};
+
+// ── UTILITÁRIOS ───────────────────────────────────────────────
+function fatorInfo(f) {
+  if(f===0)  return {label:"Não regar",   cor:"#378ADD"};
+  if(f<=0.5) return {label:"Rega leve",   cor:"#639922"};
+  if(f<=1.0) return {label:"Rega normal", cor:"#BA7517"};
+  if(f<=1.5) return {label:"Rega intensa",cor:"#D85A30"};
+  return           {label:"Emergência",  cor:"#E24B4A"};
+}
+
+function diasEntre(dataStr) {
+  if(!dataStr) return null;
+  const d = new Date(dataStr);
+  if(isNaN(d)) return null;
+  return Math.floor((Date.now() - d.getTime()) / 86400000);
+}
+
+function fmtData(s) {
+  if(!s) return "—";
+  const d = new Date(s);
+  if(isNaN(d)) return "—";
+  return d.toLocaleDateString("pt-BR");
+}
+
+function mostrarToast(msg) {
+  let t = document.getElementById("sg-toast");
+  if(!t) {
+    t = document.createElement("div");
+    t.id = "sg-toast";
+    t.style.cssText = "position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#1a1a18;color:#fff;padding:8px 18px;border-radius:20px;font-size:12px;z-index:999;transition:opacity .3s;pointer-events:none";
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.style.opacity = "1";
+  setTimeout(() => t.style.opacity = "0", 2500);
+}
+
+// ── RESERVATÓRIO ─────────────────────────────────────────────
+function atualizarReservatorio(galaoMlSheets, vbase, vtotal) {
+  if(galaoMlSheets > 0) galaoAtual = galaoMlSheets;
+  const pct    = Math.max(0, Math.min(100, (galaoAtual / GALAO_ML) * 100));
+  const litros = (galaoAtual / 1000).toFixed(1);
+  // vtotal = volume real bombeado por rega (dois vasos juntos)
+  // vbase  = por vaso. Se nunca regou, estima conservadoramente
+  // Autonomia: galão ÷ consumo estimado por rega
+  // Prioridade: 1) vtotal real medido, 2) vbase×2 recomendado pela IA, 3) 300mL fallback
+  // consumoPorRega = volume total saindo do galão por rega (dois vasos)
+  // vtotal já é o total. vbase é por vaso (×2). Fallback 600mL (300×2)
+  const consumoPorRega = vtotal > 0 ? vtotal
+                       : vbase > 0  ? vbase * 2
+                       :              600; // 300mL/vaso × 2 vasos
+  const dias = Math.floor(galaoAtual / consumoPorRega);
+  const semDado = vtotal === 0; // para texto informativo
+
+  const C = 2 * Math.PI * 33;
+  const offset = C * (1 - pct / 100);
+  const cor = pct <= 20 ? "#E24B4A" : pct <= 40 ? "#BA7517" : "#639922";
+
+  document.getElementById("res-litros").textContent = litros + "L";
+  document.getElementById("res-dias").textContent   = dias + " dias";
+  document.getElementById("res-pct").textContent    = Math.round(pct) + "%";
+  document.getElementById("res-vaso").textContent   = vbase + "mL";
+  document.getElementById("res-total").textContent  = vtotal + "mL";
+  const arc = document.getElementById("res-arc");
+  arc.setAttribute("stroke-dasharray", C.toFixed(1));
+  arc.setAttribute("stroke-dashoffset", offset.toFixed(1));
+  arc.setAttribute("stroke", cor);
+  document.getElementById("aut-num").textContent          = dias;
+  document.getElementById("aut-bar").style.width          = pct + "%";
+  document.getElementById("aut-bar").style.background     = cor;
+  document.getElementById("aut-meta").textContent         = semDado
+    ? litros + "L restantes · aguardando primeira rega"
+    : litros + "L restantes · " + vtotal + "mL/rega";
+}
+
+function resetGalao() {
+  galaoAtual = GALAO_ML;
+  atualizarReservatorio(GALAO_ML, 0, 0);
+}
+
+// ── ILUMINAÇÃO ───────────────────────────────────────────────
+function atualizarLuz(fase, luzOn) {
+  const p = FASES_LUZ[fase] || FASES_LUZ.vegetacao;
+  const descl = p.desliga === 0
+    ? "07:00 → 00:00"
+    : `${String(p.liga).padStart(2,"0")}:00 → ${String(p.desliga).padStart(2,"0")}:00`;
+
+  document.getElementById("luz-status").textContent = luzOn ? "Ligada" : "Desligada";
+  const b = document.getElementById("luz-badge");
+  b.textContent = luzOn ? "ON" : "OFF";
+  b.style.background = luzOn ? "#e8f5e9" : "#f5f5f5";
+  b.style.color = luzOn ? "#2e7d32" : "var(--text-sec)";
+  document.getElementById("luz-fase").textContent    = FASE_NOMES[fase] || fase;
+  document.getElementById("luz-horario").textContent = descl;
+  document.getElementById("luz-ciclo").textContent   = `${p.h}h luz / ${24 - p.h}h escuro`;
+}
+
+// ── PLANTAS ──────────────────────────────────────────────────
+function atualizarPlanta(idx, diasCiclo) {
+  const n    = idx + 1;
+  const dados = idx === 0 ? dadosCicloP1 : dadosCicloP2;
+  document.getElementById(`dias-p${n}`).textContent =
+    diasCiclo > 0 ? `Dia ${diasCiclo} no SmartGrow` : "Ciclo não iniciado";
+
+  const el = document.getElementById(`ciclo-p${n}`);
+  if(dados) {
+    const dv = diasEntre(dados.germinacao);
+    const ds = diasEntre(dados.smartgrow);
+    const ls = [];
+    if(dv !== null)   ls.push(`Idade: ${dv} dias (desde ${fmtData(dados.germinacao)})`);
+    if(dados.vaso1)   ls.push(`Primeiro vaso: ${fmtData(dados.vaso1)}`);
+    if(ds !== null)   ls.push(`No SmartGrow: ${ds} dias (desde ${fmtData(dados.smartgrow)})`);
+    if(dados.altura)  ls.push(`Altura de entrada: ${dados.altura}cm`);
+    el.innerHTML = ls.join("<br>");
+  } else {
+    el.innerHTML = "";
+  }
+}
+
+function setFase(idx, fase) {
+  const id = idx === 0 ? "fase-p1" : "fase-p2";
+  const ii = idx === 0 ? "info-p1" : "info-p2";
+  document.querySelectorAll(`#${id} .pill`).forEach(p =>
+    p.classList.toggle("ativa", p.textContent === fase));
+  document.getElementById(ii).innerHTML = `Fase atual: <strong>${fase}</strong>`;
+}
+
+// ── FORMULÁRIO INLINE DAS PLANTAS ────────────────────────────
+function toggleForm(n) {
+  const f = document.getElementById("form-p" + n);
+  if(!f) return;
+  const aberto = f.style.display === "block";
+  f.style.display = aberto ? "none" : "block";
+  if(!aberto) preencherFormulario(n);
+}
+
+function preencherFormulario(n) {
+  const dados = n === 1 ? dadosCicloP1 : dadosCicloP2;
+  if(!dados) return;
+  const p = n === 1 ? "p1" : "p2";
+  if(dados.germinacao) document.getElementById(p + "-germ").value     = dados.germinacao;
+  if(dados.vaso1)      document.getElementById(p + "-vaso1").value    = dados.vaso1;
+  if(dados.altura)     document.getElementById(p + "-altura").value   = dados.altura;
+  if(dados.smartgrow)  document.getElementById(p + "-smartgrow").value = dados.smartgrow;
+}
+
+function preencherFormularios() {
+  if(dadosCicloP1) preencherFormulario(1);
+  if(dadosCicloP2) preencherFormulario(2);
+}
+
+function salvarDadosPlanta(n) {
+  const p = n === 1 ? "p1" : "p2";
+  const dados = {
+    germinacao: document.getElementById(p + "-germ").value,
+    vaso1:      document.getElementById(p + "-vaso1").value,
+    altura:     document.getElementById(p + "-altura").value,
+    smartgrow:  document.getElementById(p + "-smartgrow").value,
+  };
+  if(n === 1) dadosCicloP1 = dados; else dadosCicloP2 = dados;
+  // Persiste no localStorage imediatamente
+  localStorage.setItem("sg_ciclo_p" + n, JSON.stringify(dados));
+  atualizarPlanta(n - 1, 0);
+  document.getElementById("form-p" + n).style.display = "none";
+  mostrarToast(`Dados da Planta ${n} salvos!`);
+  // Envia ao Sheets em background
+  fetch(GAS_URL, {
+    method: "POST",
+    headers: {"Content-Type": "text/plain"},
+    body: JSON.stringify({tipo:"dados_ciclo", fasePlanta:"germinacao", [p]: dados})
+  }).catch(() => {});
+}
+
+// ── GRÁFICO ──────────────────────────────────────────────────
+function renderChart(dados) {
+  const slice = dados.slice(0, janelaAtual).reverse();
+  if(chartInst) chartInst.destroy();
+  chartInst = new Chart(document.getElementById("sg-chart"), {
+    type: "line",
+    data: {
+      labels: slice.map(d => d.ts),
+      datasets: [
+        {label:"Vaso 1", data:slice.map(d=>d.u1), borderColor:"#378ADD", backgroundColor:"transparent", borderWidth:1.5, pointRadius:3, tension:0.3},
+        {label:"Vaso 2", data:slice.map(d=>d.u2), borderColor:"#639922", backgroundColor:"transparent", borderWidth:1.5, pointRadius:3, tension:0.3},
+        {label:"Média",  data:slice.map(d=>d.media), borderColor:"#888780", backgroundColor:"transparent", borderWidth:1, borderDash:[4,3], pointRadius:2, tension:0.3},
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {legend: {display: false}},
+      scales: {
+        y: {min:0, max:100, ticks:{font:{size:11}, callback:v=>v+"%"}, grid:{color:"rgba(0,0,0,0.04)"}},
+        x: {ticks:{font:{size:10}, maxRotation:45, autoSkip:true, maxTicksLimit:8}, grid:{display:false}}
+      }
+    }
+  });
+}
+
+function setJanela(btn, n) {
+  janelaAtual = n;
+  document.querySelectorAll(".jbtn").forEach(b => b.classList.remove("ativo"));
+  btn.classList.add("ativo");
+  if(todosOsDados.length) renderChart(todosOsDados);
+}
+
+// ── COLHEITA E PDF ────────────────────────────────────────────
+function colherPlanta(numPlanta) {
+  if(!confirm(`Registrar colheita da Planta ${numPlanta}?\nIsso vai gerar o relatório PDF e salvar o ciclo no histórico.`)) return;
+  const ciclo = numPlanta === 1 ? dadosCicloP1 : dadosCicloP2;
+  const st = document.getElementById("sg-status");
+  st.textContent = "Gerando PDF..."; st.className = "badge badge-load";
+
+  fetch(DADOS_URL).then(r => r.text()).then(txt => {
+    const json = JSON.parse(txt.replace(/^[^(]+\(|\);?$/g, ""));
+    const rows = (json.table.rows || []).filter(r => r.c && r.c[0] && r.c[0].v);
+    const dados = rows.map(r => {
+      const c = r.c;
+      const sv = (i,df="") => c[i]&&c[i].v!=null ? String(c[i].v) : df;
+      const nv = (i,df=0)  => c[i]&&c[i].v!=null ? parseFloat(c[i].v)||df : df;
+      return {
+        ts: String(c[0]?(c[0].f||c[0].v||""):"").substring(0,16),
+        hora: sv(1), u1:nv(2), u2:nv(3), media:nv(4),
+        vbase:nv(8), vtotal:nv(9), fase:sv(11,"vegetacao"),
+        diasCiclo:nv(12), fator:nv(14,1.0), diag:sv(15),
+      };
+    }).filter(d => d.diag && !d.diag.startsWith("Erro"));
+
+    gerarRelatorioPDF(numPlanta, ciclo, dados);
+    st.textContent = "Ao vivo"; st.className = "badge badge-live";
+  }).catch(err => {
+    alert("Erro ao buscar dados: " + err.message);
+    st.textContent = "Ao vivo"; st.className = "badge badge-live";
+  });
+}
+
+function gerarRelatorioPDF(numPlanta, ciclo, dados) {
+  const totalDias     = ciclo ? (diasEntre(ciclo.germinacao) || 0) : 0;
+  const diasSmartGrow = ciclo ? (diasEntre(ciclo.smartgrow)  || 0) : 0;
+  const totalAgua     = dados.reduce((s,d) => s + d.vtotal, 0);
+  const mediaUmidade  = dados.length ? (dados.reduce((s,d) => s+d.media, 0) / dados.length).toFixed(1) : "--";
+  const maxFator      = dados.length ? Math.max(...dados.map(d => d.fator)).toFixed(1) : "--";
+
+  const fases = {};
+  dados.forEach(d => {
+    if(!fases[d.fase]) fases[d.fase] = {count:0, agua:0, umidadeSum:0};
+    fases[d.fase].count++;
+    fases[d.fase].agua += d.vtotal;
+    fases[d.fase].umidadeSum += d.media;
+  });
+
+  const diagsUnicos = [...new Set(dados.map(d=>d.diag).filter(d=>d&&d.length>5))].slice(0,6);
+  const passo = Math.max(1, Math.floor(dados.length / 12));
+  const porSemana = [];
+  for(let i = dados.length-1; i >= 0; i -= passo)
+    porSemana.push({ts:dados[i].ts.substring(5,10), media:dados[i].media, vtotal:dados[i].vtotal});
+  porSemana.reverse();
+
+  const resumo = {
+    id: Date.now(), planta: numPlanta,
+    dataColheita: new Date().toLocaleDateString("pt-BR"),
+    germinacao: ciclo?.germinacao||"", smartgrow: ciclo?.smartgrow||"",
+    alturaEntrada: ciclo?.altura||"",
+    totalDias, diasSmartGrow,
+    totalAguaML: Math.round(totalAgua),
+    mediaUmidade: parseFloat(mediaUmidade),
+    maxFator: parseFloat(maxFator),
+    totalLeituras: dados.length,
+    fases: Object.entries(fases).map(([f,v]) => ({
+      fase:f, leituras:v.count, aguaML:Math.round(v.agua),
+      umidadeMedia:(v.umidadeSum/v.count).toFixed(1)
+    })),
+    diagsMarcos: diagsUnicos,
+  };
+
+  salvarCicloNoHistorico(resumo);
+  const html = montarHTMLRelatorio(numPlanta, ciclo, resumo, diagsUnicos, porSemana);
+  const janela = window.open("", "_blank");
+  janela.document.write(html);
+  janela.document.close();
+  setTimeout(() => { janela.focus(); janela.print(); }, 800);
+}
+
+function montarHTMLRelatorio(n, ciclo, r, diags, pontos) {
+  const fasesHTML = r.fases.map(f =>
+    `<tr><td>${FASE_NOMES[f.fase]||f.fase}</td><td>${f.leituras}</td><td>${f.aguaML}mL</td><td>${f.umidadeMedia}%</td></tr>`
+  ).join("");
+
+  // SVG gráfico de umidade inline
+  const W=560,H=120,pad=30;
+  const xs = pontos.map((_,i)=>pad+i*(W-2*pad)/(Math.max(pontos.length-1,1)));
+  const yU = v=>H-pad-(v/100)*(H-2*pad);
+  const pts = pontos.map((p,i)=>`${xs[i]},${yU(p.media)}`).join(" ");
+  const svgU = pontos.length ? `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%">
+    <rect width="${W}" height="${H}" fill="#f9faf9" rx="4"/>
+    <line x1="${pad}" y1="${yU(75)}" x2="${W-pad}" y2="${yU(75)}" stroke="#4a7c59" stroke-width="0.5" stroke-dasharray="4,3"/>
+    <line x1="${pad}" y1="${yU(35)}" x2="${W-pad}" y2="${yU(35)}" stroke="#BA7517" stroke-width="0.5" stroke-dasharray="4,3"/>
+    <text x="${W-pad+2}" y="${yU(75)+4}" font-size="8" fill="#4a7c59">75%</text>
+    <text x="${W-pad+2}" y="${yU(35)+4}" font-size="8" fill="#BA7517">35%</text>
+    <polyline points="${pts}" fill="none" stroke="#378ADD" stroke-width="1.5" stroke-linejoin="round"/>
+    ${pontos.filter((_,i)=>i%Math.max(1,Math.floor(pontos.length/6))===0).map((p,i)=>
+      `<text x="${xs[i*Math.max(1,Math.floor(pontos.length/6))]}" y="${H-4}" font-size="8" fill="#888" text-anchor="middle">${p.ts}</text>`).join("")}
+  </svg>` : "";
+
+  return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
+<title>SmartGrow — Relatório Planta ${n}</title>
+</head><body>
+<div class="capa">
+  <div><h1>SmartGrow</h1><p class="sub">Relatório de Ciclo — Auditoria de Cultivo</p><p class="sub" style="margin-top:6px;color:#4a7c59">SGRW_DC_P${n}_${r.dataColheita.replace(/\//g,"-")}</p></div>
+  <div style="text-align:right">
+    <span style="background:#4a7c59;color:#fff;font-size:11px;padding:3px 12px;border-radius:20px;display:inline-block;margin-bottom:6px">Planta ${n} — Vaso ${n}</span>
+    <p style="font-size:14px;font-weight:500">Ciclo Encerrado</p>
+    <p class="sub">Colheita: ${r.dataColheita}</p>
+  </div>
+</div>
+
+<p class="sec-title">Resumo Executivo</p>
+<div class="grid4">
+  <div class="card-m"><p class="v">${r.totalDias}</p><p class="l">dias de vida total</p></div>
+  <div class="card-m"><p class="v">${r.diasSmartGrow}</p><p class="l">dias no SmartGrow</p></div>
+  <div class="card-m"><p class="v">${(r.totalAguaML/1000).toFixed(1)}L</p><p class="l">água consumida</p></div>
+  <div class="card-m"><p class="v">${r.mediaUmidade}%</p><p class="l">umidade média</p></div>
+  <div class="card-m"><p class="v">${ciclo?.altura||"--"}cm</p><p class="l">altura de entrada</p></div>
+  <div class="card-m"><p class="v">${r.maxFator}</p><p class="l">fator rega máx.</p></div>
+  <div class="card-m"><p class="v">${r.totalLeituras}</p><p class="l">leituras</p></div>
+  <div class="card-m"><p class="v">${r.fases.length}</p><p class="l">fases completadas</p></div>
+</div>
+
+<p class="sec-title">Linha do Tempo</p>
+${[
+  ["Germinação", fmtData(ciclo?.germinacao)],
+  ["Primeiro vaso", fmtData(ciclo?.vaso1)],
+  [`Entrada no SmartGrow — ${ciclo?.altura||"--"}cm`, fmtData(ciclo?.smartgrow)],
+  ["Colheita", r.dataColheita],
+].map(([l,d],i)=>`<div class="tl"><div class="tl-dot" ${i===3?'style="background:#E24B4A"':''}></div><div><strong>${l}</strong> <span style="color:#888;font-size:11px">${d}</span></div></div>`).join("")}
+
+<p class="sec-title">Consumo por Fase</p>
+<table><tr><th>Fase</th><th>Leituras</th><th>Água Total</th><th>Umidade Média</th></tr>${fasesHTML}</table>
+
+<p class="sec-title">Histórico de Umidade do Solo</p>
+<div style="background:#f9faf9;border-radius:8px;padding:12px;margin-bottom:8px">${svgU}</div>
+<p style="font-size:10px;color:#888;margin-bottom:16px">Linha verde = alvo 75% | Linha laranja = mínimo 35%</p>
+
+<p class="sec-title">Diagnósticos Marcantes da IA</p>
+${diags.map(d=>`<div class="diag">${d}</div>`).join("")||'<p style="color:#888;font-size:12px">Nenhum diagnóstico registrado.</p>'}
+
+<div class="rodape">
+  <span>SmartGrow — Sistema de Cultivo Indoor Automatizado</span>
+  <span>Planta ${n} · Colheita em ${r.dataColheita}</span>
+</div>
+</body></html>`;
+}
+
+async function salvarCicloNoHistorico(resumo) {
+  try {
+    let historico = [];
+    try {
+      const existing = await window.storage.get("historico_ciclos");
+      if(existing) historico = JSON.parse(existing.value);
+    } catch(e){}
+    historico.push(resumo);
+    await window.storage.set("historico_ciclos", JSON.stringify(historico));
+  } catch(e) {}
+}
+
+async function carregarHistorico() {
+  try {
+    const result = await window.storage.get("historico_ciclos");
+    if(!result) return [];
+    return JSON.parse(result.value);
+  } catch(e) { return []; }
+}
+
+// ── EVENTOS ──────────────────────────────────────────────────
+function carregarEventos() {
+  fetch(EVTS_URL).then(r => r.text()).then(txt => {
+    const json = JSON.parse(txt.replace(/^[^(]+\(|\);?$/g, ""));
+    const rows = (json.table.rows || []).filter(r => r.c && r.c[0] && r.c[0].v);
+
+    for(const r of rows) {
+      const c    = r.c;
+      const tipo = String(c[2]&&c[2].v!=null ? c[2].v : "");
+      const desc = String(c[3]&&c[3].v!=null ? c[3].v : "");
+
+      // Carrega dados do ciclo do Sheets (só se ainda não temos do localStorage)
+      if(tipo === "dados_ciclo_P1" && !dadosCicloP1) {
+        try { dadosCicloP1 = JSON.parse(desc); localStorage.setItem("sg_ciclo_p1", desc); } catch(e){}
+      }
+      if(tipo === "dados_ciclo_P2" && !dadosCicloP2) {
+        try { dadosCicloP2 = JSON.parse(desc); localStorage.setItem("sg_ciclo_p2", desc); } catch(e){}
+      }
+
+      // Análises visuais — renderiza na seção
+      if(tipo.startsWith("analise_visual_")) {
+        const num = tipo.includes("P2") ? "2" : "1";
+        let dados = {};
+        try { dados = JSON.parse(desc); } catch(e){}
+        const cores = {"ótimo":"#4a7c59","bom":"#639922","atenção":"#BA7517","crítico":"#E24B4A"};
+        const cor   = cores[dados.estado] || "#888";
+        const hora  = String(c[1]&&c[1].f ? c[1].f : c[1]&&c[1].v ? c[1].v : "").substring(0,5);
+        const itemEl = document.createElement("div");
+        itemEl.className = "file-row";
+        itemEl.innerHTML = `
+          <div class="foto-thumb" style="flex-direction:column;gap:2px">
+            <span style="font-size:16px">🌿</span>
+            <span style="font-size:9px;color:var(--green);font-weight:500">P${num}</span>
+          </div>
+          <div style="flex:1;min-width:0">
+            <p class="file-name">${dados.ts||hora} — Planta ${num}</p>
+            <p class="file-meta" style="color:${cor}">${(dados.estado||"--").charAt(0).toUpperCase()+(dados.estado||"--").slice(1)} · ${dados.fase||"--"} · ${dados.altura?dados.altura+"cm":"--"}</p>
+            <p class="file-meta" style="margin-top:2px">${dados.resumo?dados.resumo.substring(0,80)+"...":""}</p>
+          </div>`;
+        const lista = document.getElementById("analises-lista");
+        if(lista.children.length < 6) lista.appendChild(itemEl);
+        document.getElementById("analises-count").textContent =
+          lista.children.length + " análise" + (lista.children.length > 1 ? "s" : "");
+      }
+    }
+
+    // Se não encontrou análises visuais, mostra mensagem
+    const listaAn = document.getElementById("analises-lista");
+    if(!listaAn.children.length) {
+      listaAn.innerHTML = '<p style="font-size:13px;color:var(--text-ter)">Nenhuma análise ainda. Use o app SmartGrow Vision.</p>';
+      document.getElementById("analises-count").textContent = "0 análises";
+    }
+
+    atualizarPlanta(0, 0);
+    atualizarPlanta(1, 0);
+    preencherFormularios();
+
+    // Renderiza últimos 8 eventos
+    const icones = {
+      start_ciclo:"🌱", galao_cheio:"💧", toggle_luz:"💡",
+      desequilibrio_hidraulico:"⚠️", dados_ciclo_P1:"🌿", dados_ciclo_P2:"🌿",
+      envio_manual:"📡", analise_visual_P1:"🔬", analise_visual_P2:"🔬", bomba_on:"💧", bomba_off:"⏹", sensor_falho:"⚠️", rega_remota:"📱"
+    };
+    const itens = rows.slice(0, 8).map(r => {
+      const c    = r.c;
+      const hora = String(c[1]&&c[1].f ? c[1].f : c[1]&&c[1].v ? c[1].v : "").substring(0,5);
+      const tipo = String(c[2]&&c[2].v!=null ? c[2].v : "");
+      const desc = String(c[3]&&c[3].v!=null ? c[3].v : "");
+      return `<div class="evento-row">
+        <span class="evento-hora">${hora}</span>
+        <div>
+          <p class="evento-tipo">${icones[tipo]||"•"} ${tipo}</p>
+          <p class="evento-desc">${desc.length>80 ? desc.substring(0,80)+"..." : desc}</p>
+        </div>
+      </div>`;
+    }).join("");
+    document.getElementById("eventos-list").innerHTML =
+      itens || '<p style="font-size:13px;color:var(--text-ter)">Nenhum evento registrado.</p>';
+  }).catch(() => {});
+}
+
+// ── DADOS PRINCIPAIS ─────────────────────────────────────────
+function carregarDados() {
+  const st = document.getElementById("sg-status");
+  st.textContent = "Carregando..."; st.className = "badge badge-load";
+  document.getElementById("sg-error").innerHTML    = "";
+  document.getElementById("sg-warn").innerHTML     = "";
+  document.getElementById("sg-alerta-ia").innerHTML= "";
+  // Limpa análises visuais para recarregar
+  document.getElementById("analises-lista").innerHTML =
+    '<p style="font-size:13px;color:var(--text-ter)">Carregando análises...</p>';
+  document.getElementById("analises-count").textContent = "";
+
+  fetch(DADOS_URL).then(r => r.text()).then(txt => {
+    const json = JSON.parse(txt.replace(/^[^(]+\(|\);?$/g, ""));
+    const rows = (json.table.rows || []).filter(r => r.c && r.c[0] && r.c[0].v);
+
+    // Helpers de leitura de células do gviz
+    const sv = (c,i,df="") => c[i]&&c[i].v!=null ? String(c[i].v) : df;
+    const nv = (c,i,df=0)  => c[i]&&c[i].v!=null ? parseFloat(c[i].v)||df : df;
+    const parseHora = (c,i) => {
+      if(!c[i]) return "--";
+      const f = String(c[i].f||"");
+      if(f && f.includes(":")) return f.substring(0,5);
+      const v = String(c[i].v||"");
+      const m = v.match(/Date\(\d+,\d+,\d+,(\d+),(\d+)/);
+      if(m) return String(m[1]).padStart(2,"0")+":"+String(m[2]).padStart(2,"0");
+      return "--";
+    };
+
+    const dados = rows.map(r => {
+      const c = r.c;
+      // Label do gráfico: usa hora formatada da coluna B
+      const ts = parseHora(c,1); // label do gráfico = hora HH:MM
+
+      return {
+        ts,
+        hora: ts,
+        u1:       nv(c,2), u2:nv(c,3), media:nv(c,4), dif:nv(c,5),
+        desequil: sv(c,6,"NAO"),
+        boia:     nv(c,7),
+        vbase:    nv(c,8), vtotal:nv(c,9),
+        galaoMl:  nv(c,10,7000),
+        fase:     sv(c,11,"vegetacao"),
+        diasCiclo:nv(c,12),
+        luzOn:    sv(c,13)==="ON",
+        fator:    nv(c,14,1.0),
+        diag:     sv(c,15),
+        motivo:   sv(c,16),
+        alerta:   sv(c,17),
+        tempAr:   nv(c,18,null),
+        umidAr:   nv(c,19,null),
+        pressao:  nv(c,20,null),
+        vpd:      nv(c,21,null),
+        tempTerra:nv(c,22,null),
+      };
+    }).filter(d => {
+      const g = d.diag;
+      return g && !g.startsWith("Erro") && !g.startsWith("Rate") && !g.startsWith("?");
+    });
+
+    if(!dados.length) throw new Error("Nenhum dado válido ainda. Aguarde o próximo ciclo do ESP32.");
+    todosOsDados = dados;
+    const d  = dados[0];
+    const fi = fatorInfo(d.fator);
+
+    st.textContent = "Ao vivo"; st.className = "badge badge-live";
+
+    // Inicia monitoramento de status ESP32
+    iniciarMonitorStatusESP32();
+
+    // Alertas
+    if(d.desequil === "SIM")
+      document.getElementById("sg-warn").innerHTML =
+        `<div class="card-warn"><div class="warn-dot"></div><span style="font-size:13px">Desequilíbrio hidráulico — diferença de ${d.dif}% entre os vasos. Verifique o sistema de irrigação.</span></div>`;
+    // Alerta de sensor falho
+    const s1f = parseInt(d.tempAr) === -999; // flag especial -- ou usa campo dedicado
+    // Verifica nos eventos recentes se ha sensor_falho
+    // (o flag chega via evento, nao via dado direto -- dashboard ja mostra nos eventos)
+    if(d.alerta)
+      document.getElementById("sg-alerta-ia").innerHTML =
+        `<div class="card-warn"><div class="warn-dot"></div><span style="font-size:13px"><strong>IA:</strong> ${d.alerta}</span></div>`;
+
+    // Diagnóstico
+    document.getElementById("diag-text").textContent = d.diag;
+    document.getElementById("diag-ts").textContent   = `Última leitura · ${d.hora||d.ts}`;
+    if(d.motivo) {
+      document.getElementById("sec-motivo").classList.remove("hidden");
+      document.getElementById("motivo-text").textContent = d.motivo;
+    }
+
+    // Fator de rega
+    document.getElementById("fator-num").textContent        = d.fator.toFixed(1);
+    document.getElementById("fator-num").style.color        = fi.cor;
+    document.getElementById("fator-bar").style.width        = Math.min((d.fator/2)*100,100)+"%";
+    document.getElementById("fator-bar").style.background   = fi.cor;
+    document.getElementById("fator-desc").textContent       = fi.label;
+
+    // Sensores
+    document.getElementById("m-u1").innerHTML    = d.u1+'<span class="metric-unit">%</span>';
+    document.getElementById("m-u2").innerHTML    = d.u2+'<span class="metric-unit">%</span>';
+    document.getElementById("m-med").innerHTML   = d.media.toFixed(1)+'<span class="metric-unit">%</span>';
+    document.getElementById("m-vbase").innerHTML = d.vbase+'<span class="metric-unit">mL</span>';
+    document.getElementById("m-vtotal").innerHTML= d.vtotal+'<span class="metric-unit">mL</span>';
+    // Novos sensores — mostra "--" se não disponível
+    const fmtS = (v, unit, dec=1) => v!==null && v!==0
+      ? v.toFixed(dec)+'<span class="metric-unit">'+unit+'</span>'
+      : '<span style="color:var(--text-ter);font-size:11px">--</span>';
+    document.getElementById("m-temp").innerHTML      = fmtS(d.tempAr,    "°C");
+    document.getElementById("m-umid-ar").innerHTML   = fmtS(d.umidAr,    "%");
+    document.getElementById("m-vpd").innerHTML       = fmtS(d.vpd,       "kPa", 2);
+    document.getElementById("m-temp-terra").innerHTML= fmtS(d.tempTerra, "°C");
+
+    atualizarLuz(d.fase, d.luzOn);
+    atualizarPlanta(0, d.diasCiclo);
+    atualizarPlanta(1, d.diasCiclo);
+
+    // Boia
+    const ok = d.boia === 0;
+    document.getElementById("boia-dot").className    = "dot " + (ok ? "dot-ok" : "dot-alert");
+    document.getElementById("boia-label").textContent = ok ? "Nível adequado" : "ALERTA: Nível baixo";
+    document.getElementById("boia-ts").textContent    = `Atualizado: ${d.hora||d.ts}`;
+
+    atualizarReservatorio(d.galaoMl, d.vbase, d.vtotal);
+    renderChart(dados);
+    carregarEventos();
+
+  }).catch(err => {
+    st.textContent = "Sem dados"; st.className = "badge badge-err";
+    // Mantém dados anteriores visíveis — não limpa a tela
+    document.getElementById("sg-error").innerHTML =
+      `<div class="err-box">⚠️ Não foi possível atualizar os dados. Exibindo última leitura disponível. Erro: ${err.message}</div>`;
+    carregarEventos();
+  });
+}
+
+// ── HISTÓRICO DE CICLOS ──────────────────────────────────────
+carregarHistorico().then(historico => {
+  if(!historico || !historico.length) return;
+  document.getElementById("sec-historico").style.display = "block";
+  const html = historico.slice().reverse().map(c => `
+    <div style="padding:12px 0;border-bottom:1px solid var(--border)">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <span style="font-size:13px;font-weight:500">Planta ${c.planta} — ${c.dataColheita}</span>
+        <span style="font-size:11px;color:var(--text-ter)">${c.totalDias} dias · ${(c.totalAguaML/1000).toFixed(1)}L</span>
+      </div>
+      <div style="display:flex;gap:16px;font-size:11px;color:var(--text-sec);flex-wrap:wrap">
+        <span>Entrada: ${c.alturaEntrada||"--"}cm</span>
+        <span>SmartGrow: ${c.diasSmartGrow} dias</span>
+        <span>Umid. média: ${c.mediaUmidade}%</span>
+        <span>${c.totalLeituras} leituras</span>
+      </div>
+    </div>`).join("");
+  document.getElementById("historico-list").innerHTML =
+    html || '<p style="font-size:13px;color:var(--text-ter)">Nenhum ciclo encerrado ainda.</p>';
+});
+
+// ── STATUS ESP32 ─────────────────────────────────────────────
+// Monitora se o ESP32 está enviando dados regularmente.
+// Se passar mais de ESP32_TIMEOUT_MIN minutos sem nova leitura,
+// exibe alerta de "Dispositivo offline" no header.
+function iniciarMonitorStatusESP32() {
+  if (timerStatusESP32) clearInterval(timerStatusESP32);
+  ultimaLeituraTs = new Date();
+  atualizarSubtituloConexao();
+  timerStatusESP32 = setInterval(atualizarSubtituloConexao, 60000); // checa a cada 1min
+}
+
+function atualizarSubtituloConexao() {
+  const el = document.getElementById("h-ultima-atualizacao");
+  if (!ultimaLeituraTs) { el.textContent = "Monitor de Cultivo"; return; }
+
+  const agora = new Date();
+  const minAtras = Math.floor((agora - ultimaLeituraTs) / 60000);
+  const st = document.getElementById("sg-status");
+
+  if (minAtras < 2) {
+    el.textContent = "Atualizado agora";
+    el.style.color = "";
+  } else if (minAtras < ESP32_TIMEOUT_MIN) {
+    el.textContent = `Última leitura: ${minAtras} min atrás`;
+    el.style.color = "";
+  } else {
+    // ESP32 offline — mais de 20 min sem dados
+    el.textContent = `⚠️ Sem atualização há ${minAtras} min`;
+    el.style.color = "#f57f17";
+    st.textContent = "Dispositivo offline";
+    st.className   = "badge badge-offline";
+    // Banner de alerta se ainda não exibido
+    const errEl = document.getElementById("sg-error");
+    if (!errEl.innerHTML.includes("offline")) {
+      errEl.innerHTML =
+        `<div class="err-box" style="background:#fff8e1;border-color:#ffe082;color:#795548">
+          ⚠️ O ESP32 está offline ou sem internet há ${minAtras} minutos.<br>
+          Os dados abaixo são da última leitura registrada — o sistema pode estar operando
+          normalmente de forma autônoma (rega e luz continuam funcionando localmente).
+        </div>`;
+    }
+  }
+}
+
+// ── REGA REMOTA ──────────────────────────────────────────────
+function enviarRegaRemota() {
+  const vol = parseInt(document.getElementById("rega-remota-vol").value);
+  if (!vol || vol < 50 || vol > 1000) {
+    mostrarToast("Volume inválido. Use entre 50 e 1000 mL.");
+    return;
+  }
+  const btn    = document.getElementById("btn-rega-remota");
+  const status = document.getElementById("rega-remota-status");
+  const aviso  = document.getElementById("rega-remota-aviso");
+
+  btn.disabled    = true;
+  btn.textContent = "Enviando...";
+  status.textContent = "";
+  aviso.textContent  = "";
+
+  // Primeiro passo: POST ao GAS (recebe redirect 302 do Google)
+  fetch(GAS_URL, {
+    method: "POST",
+    headers: {"Content-Type": "text/plain"},
+    body: JSON.stringify({ tipo: "rega_remota", volume_ml: vol }),
+    redirect: "manual"
+  }).then(r => {
+    // Google redireciona -- fetch com redirect:manual retorna tipo "opaqueredirect"
+    // Nesse caso consideramos sucesso (o GAS recebeu)
+    if (r.ok || r.type === "opaqueredirect" || r.status === 0) {
+      status.textContent = "✅ Comando enviado!";
+      status.style.color = "var(--green)";
+      aviso.textContent  = `${vol}mL programados. O ESP32 executará na próxima sincronização (até 15 min).`;
+      mostrarToast(`Rega de ${vol}mL agendada!`);
+    } else {
+      throw new Error("HTTP " + r.status);
+    }
+  }).catch(err => {
+    // Tenta via no-cors como fallback
+    fetch(GAS_URL, {
+      method: "POST",
+      mode: "no-cors",
+      headers: {"Content-Type": "text/plain"},
+      body: JSON.stringify({ tipo: "rega_remota", volume_ml: vol })
+    }).then(() => {
+      status.textContent = "✅ Comando enviado!";
+      status.style.color = "var(--green)";
+      aviso.textContent  = `${vol}mL programados. O ESP32 executará na próxima sincronização (até 15 min).`;
+      mostrarToast(`Rega de ${vol}mL agendada!`);
+    }).catch(() => {
+      status.textContent = "❌ Falha ao enviar";
+      status.style.color = "var(--red)";
+      aviso.textContent  = "Verifique sua conexão e tente novamente.";
+    });
+  }).finally(() => {
+    btn.disabled    = false;
+    btn.textContent = "💧 Regar agora";
+  });
+}
+
+// ── INIT ─────────────────────────────────────────────────────
+// Preenche formulários com dados do localStorage antes do primeiro fetch
+preencherFormularios();
+carregarDados();
+
+</script>
+
+</body>
+</html>

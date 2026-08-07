@@ -1,0 +1,35 @@
+# ============================================================
+# SmartGrow 2.0
+# ============================================================
+
+# -- SEGREDOS -- nunca versionar -----------------------------
+src/firmware/include/secrets.h
+docs/10-credenciais-e-endpoints.md
+*.key
+.env
+
+# -- PlatformIO ----------------------------------------------
+.pio/
+.pioenvs/
+.piolibdeps/
+src/firmware/.vscode/
+
+# -- KiCad ---------------------------------------------------
+hardware/kicad/**/.history/
+*-backups/
+*.kicad_pcb-bak
+*.kicad_sch-bak
+fp-info-cache
+*.lck
+
+# -- Referencias pesadas -------------------------------------
+# Papers e relatorios sao contexto local, nao codigo.
+# Descomente se o repositorio ficar grande demais:
+# referencias/biblioteca-cientifica/
+
+# -- Sistema -------------------------------------------------
+.DS_Store
+Thumbs.db
+desktop.ini
+~$*
+*.tmp
